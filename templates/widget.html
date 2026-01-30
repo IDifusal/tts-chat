@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kick TTS Widget</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            overflow: hidden;
+        }
+        
+        .message-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        
+        .message {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            animation: slideIn 0.3s ease-out, slideOut 0.3s ease-out 4.7s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .message .username {
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .message.sound-effect {
+            background: rgba(102, 126, 234, 0.9);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+        }
+        
+        .debug {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            display: none;
+        }
+        
+        .debug.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="message-container" id="message-container"></div>
+    <div class="debug" id="debug">
+        Status: Connecting...
+    </div>
+    
+    <script>
+        const messageContainer = document.getElementById('message-container');
+        const debug = document.getElementById('debug');
+        let ws = null;
+        let audioQueue = [];
+        let isPlaying = false;
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const showMessages = urlParams.get('show_messages') !== 'false';
+        const debugMode = urlParams.get('debug') === 'true';
+        
+        if (debugMode) {
+            debug.classList.add('show');
+        }
+        
+        function updateDebug(text) {
+            if (debugMode) {
+                debug.textContent = `Status: ${text}\nQueue: ${audioQueue.length}\nPlaying: ${isPlaying}`;
+            }
+        }
+        
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/events`);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                updateDebug('Connected');
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected, reconnecting...');
+                updateDebug('Disconnected - Reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateDebug('Error');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Received:', data);
+                handleMessage(data);
+            };
+        }
+        
+        function handleMessage(data) {
+            if (data.type === 'tts_message') {
+                if (showMessages) {
+                    showMessage(data.username, data.text);
+                }
+                queueAudio(data.audio_url);
+            } else if (data.type === 'sound_effect') {
+                if (showMessages) {
+                    showSoundEffect(data.username, data.sound_name);
+                }
+                queueAudio(data.audio_url);
+            }
+        }
+        
+        function showMessage(username, text) {
+            const message = document.createElement('div');
+            message.className = 'message';
+            message.innerHTML = `<span class="username">${username}:</span>${text}`;
+            
+            messageContainer.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, 5000);
+            
+            while (messageContainer.children.length > 3) {
+                messageContainer.removeChild(messageContainer.firstChild);
+            }
+        }
+        
+        function showSoundEffect(username, soundName) {
+            const message = document.createElement('div');
+            message.className = 'message sound-effect';
+            message.innerHTML = `<span class="username">${username}</span> played: ${soundName}`;
+            
+            messageContainer.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, 3000);
+        }
+        
+        function queueAudio(url) {
+            audioQueue.push(url);
+            updateDebug('Audio queued');
+            if (!isPlaying) {
+                playNextAudio();
+            }
+        }
+        
+        function playNextAudio() {
+            if (audioQueue.length === 0) {
+                isPlaying = false;
+                updateDebug('Idle');
+                return;
+            }
+            
+            isPlaying = true;
+            const url = audioQueue.shift();
+            updateDebug('Playing audio');
+            
+            const audio = new Audio(url);
+            
+            audio.onended = () => {
+                console.log('Audio finished');
+                setTimeout(playNextAudio, 100);
+            };
+            
+            audio.onerror = (error) => {
+                console.error('Audio error:', error);
+                updateDebug('Audio error');
+                setTimeout(playNextAudio, 100);
+            };
+            
+            audio.play().catch(error => {
+                console.error('Play error:', error);
+                updateDebug('Play error');
+                setTimeout(playNextAudio, 100);
+            });
+        }
+        
+        connectWebSocket();
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  tts-bot:
+    build: .
+    container_name: kick-tts-bot
+    ports:
+      - "8000:8000"
+    environment:
+      - KICK_CHANNEL=${KICK_CHANNEL}
+      - ENABLE_REDIS_CACHE=false
+    volumes:
+      - ./static/audio:/app/static/audio
+      - ./static/sounds:/app/static/sounds
+      - ./static/cache:/app/static/cache
+      - ./models:/app/models
+    restart: unless-stopped
