@@ -4,9 +4,8 @@ import json
 from typing import Optional
 
 from app.config import settings
-from app.services.piper_tts import get_tts
-from app.routes.websocket import broadcast_to_widgets
 from app.logger import logger
+from app.events import handle_event
 
 
 class KickListener:
@@ -14,8 +13,6 @@ class KickListener:
         self.channel = channel
         self.ws_url = settings.KICK_WEBSOCKET_URL
         self.chatroom_id = None
-        self.tts = get_tts()
-        self.last_message_time = {}
         
     async def start(self):
         logger.info(f"Connecting to Kick channel: {self.channel}")
@@ -103,88 +100,16 @@ class KickListener:
         if event_type in ["pusher:connection_established", "pusher_internal:subscription_succeeded", "pusher:pong"]:
             return
         
-        # Check if this is a chat message event
-        if "ChatMessageEvent" not in event_type:
+        # Check if this is a Kick event
+        if not event_type.startswith("App\\Events\\"):
             return
         
         try:
             # Parse the event data (it's a JSON string inside the JSON)
             event_data = json.loads(data["data"])
             
-            # Extract content and sender directly from event_data
-            content = event_data.get("content", "")
-            sender = event_data.get("sender", {})
-            username = sender.get("username", "unknown")
-            
-            # Ignore KickBot messages
-            if username.lower() == "kickbot":
-                return
-            
-            # Simple log: only username and message
-            logger.info(f"{username}: {content}")
-            
-            if not self._check_cooldown(username):
-                return
-            
-            if content.startswith("!") and settings.ENABLE_SOUNDS:
-                await self._handle_sound_command(content, username)
-                return
-            
-            if settings.ENABLE_TTS:
-                await self._handle_tts_message(content, username)
-        except Exception as e:
-            logger.error(f"Error parsing message: {e}")
-    
-    def _check_cooldown(self, username: str) -> bool:
-        import time
-        
-        now = time.time()
-        last_time = self.last_message_time.get(username, 0)
-        
-        if now - last_time < settings.COOLDOWN_SECONDS:
-            return False
-        
-        self.last_message_time[username] = now
-        return True
-    
-    async def _handle_sound_command(self, content: str, username: str):
-        sound_name = content[1:].split()[0]
-        sound_path = settings.SOUNDS_DIR / f"{sound_name}.mp3"
-        
-        if sound_path.exists():
-            logger.info(f"Playing sound: {sound_name} (requested by {username})")
-            
-            await broadcast_to_widgets({
-                'type': 'sound_effect',
-                'sound_name': sound_name,
-                'audio_url': f"/static/sounds/{sound_name}.mp3",
-                'username': username
-            })
-        else:
-            logger.warning(f"Sound not found: {sound_name}")
-    
-    async def _handle_tts_message(self, content: str, username: str):
-        if len(content) < settings.MIN_MESSAGE_LENGTH:
-            logger.debug(f"Message too short ({len(content)} chars), skipping")
-            return
-        
-        if len(content) > settings.MAX_MESSAGE_LENGTH:
-            content = content[:settings.MAX_MESSAGE_LENGTH]
-        
-        try:
-            logger.info(f"Generating TTS for {username}: {content[:50]}...")
-            audio_url, cached, gen_time = self.tts.generate(content, username)
-            
-            await broadcast_to_widgets({
-                'type': 'tts_message',
-                'username': username,
-                'text': content,
-                'audio_url': audio_url,
-                'cached': cached,
-                'generation_time_ms': gen_time
-            })
-            
-            logger.info(f"TTS generated: {audio_url} ({gen_time:.0f}ms, cached={cached})")
+            # Route to appropriate event handler
+            await handle_event(event_type, event_data)
             
         except Exception as e:
-            logger.error(f"TTS generation error: {e}", exc_info=True)
+            logger.error(f"Error processing event {event_type}: {e}")

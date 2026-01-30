@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Follow Alert Preview</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        
+        .preview-container {
+            max-width: 600px;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .message.follow {
+            background: rgba(255, 107, 107, 0.95);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        .message.follow .follow-icon {
+            font-size: 50px;
+            line-height: 1;
+        }
+        
+        .message.follow .follow-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .message.follow .follow-title {
+            font-size: 16px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .message.follow .follow-username {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .info {
+            color: #888;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <h1>Follow Alert Preview</h1>
+        
+        <div class="message follow">
+            <span class="follow-icon">❤️</span>
+            <div class="follow-content">
+                <div class="follow-title">Nuevo seguidor</div>
+                <div class="follow-username" id="username">difusal</div>
+            </div>
+        </div>
+        
+        <button onclick="testAnimation()">Test Animation</button>
+        
+        <p class="info">
+            Este es el diseño del alert que aparecerá en OBS cuando alguien siga el canal.<br>
+            Duración: 6.5 segundos | Color: Rojo/Rosa #ff6b6b
+        </p>
+    </div>
+    
+    <script>
+        const names = ['difusal', 'PieroD23', 'eltomallo1', 'NewFollower', 'Viewer123'];
+        let currentIndex = 0;
+        
+        function testAnimation() {
+            const alert = document.querySelector('.follow');
+            const usernameEl = document.getElementById('username');
+            
+            // Change username
+            currentIndex = (currentIndex + 1) % names.length;
+            usernameEl.textContent = names[currentIndex];
+            
+            // Restart animation
+            alert.style.animation = 'none';
+            setTimeout(() => {
+                alert.style.animation = 'slideIn 0.5s ease-out';
+            }, 10);
+        }
+    </script>
+</body>
+</html>

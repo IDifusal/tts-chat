@@ -1,41 +1,38 @@
 # Sound Effects
 
-This directory contains sound effects that can be triggered from Kick chat.
+This directory contains sound effects for the bot.
+
+## Required Files
+
+### Event Sounds (Auto-play)
+- `subscription.mp3` - Plays when someone subscribes
+- `follow.mp3` - Plays when someone follows
+
+### Command Sounds (Manual with !command)
+- `carcrashing.mp3` - Example: !carcrashing
+- Add more sounds here...
 
 ## Adding Sounds
 
-1. Download .mp3 files from:
-   - https://freesound.org/
-   - https://www.zapsplat.com/
-   - https://mixkit.co/
+1. Add `.mp3` file to this directory
+2. For commands: Users can trigger with `!filename` (without .mp3)
+3. For events: Reference in event handler
 
-2. Place files in this directory with simple names:
-   ```
-   airhorn.mp3
-   applause.mp3
-   bruh.mp3
-   fart.mp3
-   ```
+## Format
 
-3. Use in chat with `!` prefix:
-   ```
-   !airhorn
-   !applause
-   !bruh
-   ```
+- **Format:** MP3
+- **Sample Rate:** 44100 Hz recommended
+- **Channels:** Stereo or Mono
+- **Bitrate:** 128-192 kbps recommended
 
-## Recommendations
+## Free Sound Resources
 
-- Keep files under 3 seconds for best experience
-- Use 128kbps or lower bitrate to save space
-- Use simple, memorable names
-- Avoid special characters in filenames
+- [Freesound.org](https://freesound.org/)
+- [Zapsplat.com](https://www.zapsplat.com/)
+- [Pixabay Sounds](https://pixabay.com/sound-effects/)
 
-## Popular Sound Categories
+## Notes
 
-- Applause and cheers
-- Air horns and notifications
-- Gaming sounds (level up, power up)
-- Memes (bruh, oof, etc)
-- Animal sounds
-- Cartoon effects
+- Keep files under 1MB for fast loading
+- Short sounds (1-3 seconds) work best for events
+- Longer sounds OK for commands

@@ -17,6 +17,28 @@
             overflow: hidden;
         }
         
+        #audio-unlock-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+        }
+        
+        #audio-unlock-overlay button {
+            transition: all 0.3s ease;
+        }
+        
+        #audio-unlock-overlay button:hover {
+            background: #45a049 !important;
+            transform: scale(1.05);
+        }
+        
         .message-container {
             position: fixed;
             bottom: 20px;
@@ -46,6 +68,74 @@
         
         .message.sound-effect {
             background: rgba(102, 126, 234, 0.9);
+        }
+        
+        .message.subscription {
+            background: rgba(46, 213, 115, 0.95);
+            padding: 20px 25px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: slideIn 0.5s ease-out, slideOut 0.5s ease-out 7s;
+        }
+        
+        .message.subscription .sub-gif {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        
+        .message.subscription .sub-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .message.subscription .sub-title {
+            font-size: 16px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .message.subscription .sub-username {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .message.follow {
+            background: rgba(255, 107, 107, 0.95);
+            padding: 20px 25px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: slideIn 0.5s ease-out, slideOut 0.5s ease-out 6s;
+        }
+        
+        .message.follow .follow-icon {
+            font-size: 50px;
+            line-height: 1;
+        }
+        
+        .message.follow .follow-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .message.follow .follow-title {
+            font-size: 16px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .message.follow .follow-username {
+            font-size: 24px;
+            font-weight: bold;
         }
         
         @keyframes slideIn {
@@ -94,16 +184,39 @@
         Status: Connecting...
     </div>
     
+    <!-- Audio unlock overlay -->
+    <div id="audio-unlock-overlay">
+        <div style="background: rgba(0,0,0,0.9); padding: 30px; border-radius: 10px; text-align: center; max-width: 400px;">
+            <h2 style="color: #fff; margin-bottom: 20px;">🔊 Habilitar Audio</h2>
+            <p style="color: #aaa; margin-bottom: 20px;">Los navegadores requieren interacción del usuario para reproducir audio</p>
+            <button id="unlock-audio-btn" style="background: #4CAF50; color: white; border: none; padding: 15px 30px; font-size: 16px; border-radius: 5px; cursor: pointer;">
+                Activar Audio
+            </button>
+        </div>
+    </div>
+    
     <script>
         const messageContainer = document.getElementById('message-container');
         const debug = document.getElementById('debug');
         let ws = null;
         let audioQueue = [];
         let isPlaying = false;
+        let visualQueue = [];
+        let isShowingVisual = false;
+        let audioUnlocked = false;
+        let pendingFirstAudio = null;
         
         const urlParams = new URLSearchParams(window.location.search);
         const showMessages = urlParams.get('show_messages') !== 'false';
         const debugMode = urlParams.get('debug') === 'true';
+        
+        // Detect OBS Browser Source (CEF)
+        const isOBS = /obs|cef/i.test(navigator.userAgent) || window.obsstudio !== undefined;
+        
+        if (isOBS) {
+            console.log('OBS detected - autoplay enabled');
+            audioUnlocked = true; // OBS allows autoplay by default
+        }
         
         if (debugMode) {
             debug.classList.add('show');
@@ -111,13 +224,33 @@
         
         function updateDebug(text) {
             if (debugMode) {
-                debug.textContent = `Status: ${text}\nQueue: ${audioQueue.length}\nPlaying: ${isPlaying}`;
+                const platform = isOBS ? 'OBS' : 'Browser';
+                debug.textContent = `Platform: ${platform}\nStatus: ${text}\nAudio Queue: ${audioQueue.length}\nVisual Queue: ${visualQueue.length}\nPlaying: ${isPlaying}\nUnlocked: ${audioUnlocked}`;
             }
+        }
+        
+        function getBaseUrl() {
+            // Get base URL for API calls
+            if (window.location.protocol === 'file:') {
+                return 'http://localhost:8000';
+            }
+            return '';
         }
         
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${window.location.host}/events`);
+            let host = window.location.host;
+            
+            // Fallback to localhost if opened as file://
+            if (!host || window.location.protocol === 'file:') {
+                host = 'localhost:8000';
+                console.log('Detected file:// protocol, using localhost:8000');
+            }
+            
+            const wsUrl = `${protocol}//${host}/events`;
+            console.log('Connecting to:', wsUrl);
+            
+            ws = new WebSocket(wsUrl);
             
             ws.onopen = () => {
                 console.log('WebSocket connected');
@@ -137,7 +270,7 @@
             
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                console.log('Received:', data);
+                console.log('Received:', data.type, data);
                 handleMessage(data);
             };
         }
@@ -153,6 +286,12 @@
                     showSoundEffect(data.username, data.sound_name);
                 }
                 queueAudio(data.audio_url);
+            } else if (data.type === 'subscription') {
+                queueVisualEvent(() => showSubscription(data.username), 7500);
+                queueAudio('/static/sounds/subscription.mp3');
+            } else if (data.type === 'follow') {
+                queueVisualEvent(() => showFollow(data.username), 6500);
+                queueAudio('/static/sounds/follow.mp3');
             }
         }
         
@@ -184,9 +323,76 @@
             }, 3000);
         }
         
+        function queueVisualEvent(showFunction, duration) {
+            visualQueue.push({ showFunction, duration });
+            updateDebug('Visual queued');
+            if (!isShowingVisual) {
+                showNextVisual();
+            }
+        }
+        
+        function showNextVisual() {
+            if (visualQueue.length === 0) {
+                isShowingVisual = false;
+                updateDebug('Idle (visual)');
+                return;
+            }
+            
+            isShowingVisual = true;
+            const { showFunction, duration } = visualQueue.shift();
+            updateDebug('Showing visual');
+            
+            const element = showFunction();
+            
+            setTimeout(() => {
+                if (element && element.parentNode) {
+                    element.remove();
+                }
+                setTimeout(showNextVisual, 100);
+            }, duration);
+        }
+        
+        function showSubscription(username) {
+            const message = document.createElement('div');
+            message.className = 'message subscription';
+            message.innerHTML = `
+                <img src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeGl4OTNpOTh2dXdjdGdsZW43ZjBseW5sanFhOWM2ZmFlbG91enEycSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/RpfIXomvjCh8I/giphy.gif" 
+                     class="sub-gif" 
+                     alt="Thanks">
+                <div class="sub-content">
+                    <div class="sub-title">Gracias por subscribirte</div>
+                    <div class="sub-username">${username}</div>
+                </div>
+            `;
+            
+            messageContainer.appendChild(message);
+            return message;
+        }
+        
+        function showFollow(username) {
+            const message = document.createElement('div');
+            message.className = 'message follow';
+            message.innerHTML = `
+                <span class="follow-icon">❤️</span>
+                <div class="follow-content">
+                    <div class="follow-title">Nuevo seguidor</div>
+                    <div class="follow-username">${username}</div>
+                </div>
+            `;
+            
+            messageContainer.appendChild(message);
+            return message;
+        }
+        
         function queueAudio(url) {
-            audioQueue.push(url);
-            updateDebug('Audio queued');
+            // Fix URL if opened as file://
+            const baseUrl = getBaseUrl();
+            const fullUrl = url.startsWith('http') ? url : baseUrl + url;
+            
+            audioQueue.push(fullUrl);
+            console.log('Audio queued:', fullUrl);
+            updateDebug(`Audio queued (${audioQueue.length})`);
+            
             if (!isPlaying) {
                 playNextAudio();
             }
@@ -199,9 +405,17 @@
                 return;
             }
             
+            // Check if audio needs to be unlocked first
+            if (!audioUnlocked) {
+                console.log('Audio locked, showing unlock overlay');
+                showAudioUnlockOverlay();
+                return;
+            }
+            
             isPlaying = true;
             const url = audioQueue.shift();
-            updateDebug('Playing audio');
+            updateDebug(`Playing (${audioQueue.length} left)`);
+            console.log('Playing audio:', url);
             
             const audio = new Audio(url);
             
@@ -211,17 +425,72 @@
             };
             
             audio.onerror = (error) => {
-                console.error('Audio error:', error);
-                updateDebug('Audio error');
+                console.error('Audio error for URL:', url, error);
+                updateDebug('Audio error - skipping');
                 setTimeout(playNextAudio, 100);
             };
             
             audio.play().catch(error => {
-                console.error('Play error:', error);
-                updateDebug('Play error');
-                setTimeout(playNextAudio, 100);
+                console.error('Play error:', error.name, error.message);
+                
+                if (error.name === 'NotAllowedError') {
+                    console.log('Autoplay blocked, showing unlock overlay');
+                    audioUnlocked = false;
+                    audioQueue.unshift(url); // Re-add to queue
+                    isPlaying = false;
+                    showAudioUnlockOverlay();
+                } else {
+                    console.error('Other play error, skipping');
+                    updateDebug('Play error - skipping');
+                    setTimeout(playNextAudio, 100);
+                }
             });
         }
+        
+        function showAudioUnlockOverlay() {
+            // Don't show overlay in OBS - autoplay works there
+            if (isOBS) {
+                console.log('OBS detected - skipping unlock overlay');
+                audioUnlocked = true;
+                if (audioQueue.length > 0 && !isPlaying) {
+                    playNextAudio();
+                }
+                return;
+            }
+            
+            const overlay = document.getElementById('audio-unlock-overlay');
+            overlay.style.display = 'flex';
+        }
+        
+        function unlockAudio() {
+            console.log('Unlocking audio...');
+            audioUnlocked = true;
+            
+            // Play silent audio to unlock
+            const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+            silentAudio.play().then(() => {
+                console.log('Audio unlocked successfully');
+                document.getElementById('audio-unlock-overlay').style.display = 'none';
+                
+                // Start playing queue
+                if (audioQueue.length > 0 && !isPlaying) {
+                    playNextAudio();
+                }
+            }).catch(error => {
+                console.error('Failed to unlock audio:', error);
+            });
+        }
+        
+        // Setup audio unlock button
+        document.getElementById('unlock-audio-btn').addEventListener('click', unlockAudio);
+        
+        // Auto-hide overlay after 5 seconds if no audio comes
+        setTimeout(() => {
+            const overlay = document.getElementById('audio-unlock-overlay');
+            if (overlay.style.display === 'flex' && audioQueue.length === 0) {
+                overlay.style.display = 'none';
+            }
+        }, 5000);
         
         connectWebSocket();
     </script>

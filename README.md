@@ -10,17 +10,20 @@ Real-time Text-to-Speech system for Kick.com that listens to chat and generates 
 - Sound effects with `!command` triggers
 - Cache system for repeated messages
 - WebSocket real-time communication
+- **Modular event system** (chat, subscriptions, follows)
+- **Visual alerts** with animated GIFs and icons
 
 ## Architecture
 
 ```
-Kick Chat (WebSocket) 
+Kick WebSocket (Chat + Events)
     ↓
 FastAPI Server (port 8000)
     ↓
-Piper TTS (Local)
-    ↓
-Audio Storage + Cache
+Event Handlers (Modular)
+    ├── Chat → Piper TTS → Audio
+    ├── Subscription → Visual Alert
+    └── [Future Events]
     ↓
 OBS Widget (Browser Source)
 ```

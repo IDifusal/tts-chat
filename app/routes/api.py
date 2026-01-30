@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
+from pydantic import BaseModel
 
 from app.models import TTSRequest, TTSResponse, SoundEffectRequest
 from app.services.piper_tts import get_tts
@@ -7,6 +8,10 @@ from app.services.sound_service import get_sound_service
 from app.routes.websocket import broadcast_to_widgets
 
 router = APIRouter()
+
+
+class TestEventRequest(BaseModel):
+    username: str = "test_user"
 
 
 @router.post("/tts", response_model=TTSResponse)
@@ -63,3 +68,26 @@ async def play_sound(request: SoundEffectRequest):
     })
     
     return {"status": "ok", "sound_url": sound_url}
+
+
+@router.post("/test/subscription")
+async def test_subscription(request: TestEventRequest):
+    """Test subscription event"""
+    await broadcast_to_widgets({
+        'type': 'subscription',
+        'username': request.username,
+        'user_id': 12345,
+        'channel_id': 67890
+    })
+    return {"status": "ok", "event": "subscription", "username": request.username}
+
+
+@router.post("/test/follow")
+async def test_follow(request: TestEventRequest):
+    """Test follow event"""
+    await broadcast_to_widgets({
+        'type': 'follow',
+        'username': request.username,
+        'followed': 'test_channel'
+    })
+    return {"status": "ok", "event": "follow", "username": request.username}
