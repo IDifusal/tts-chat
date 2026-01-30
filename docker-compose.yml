@@ -20,10 +20,7 @@ services:
       - CACHE_DIR=./static/cache
       - AUDIO_FORMAT=mp3
       - AUDIO_BITRATE=128k
-      - ENABLE_REDIS_CACHE=${ENABLE_REDIS_CACHE:-false}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
+      - ENABLE_REDIS_CACHE=false
       - MIN_MESSAGE_LENGTH=2
       - MAX_MESSAGE_LENGTH=200
       - COOLDOWN_SECONDS=1
@@ -39,24 +36,8 @@ services:
       - ./static/cache:/app/static/cache
       - ./models:/app/models
     restart: unless-stopped
-    depends_on:
-      - redis
     networks:
       - tts-network
-
-  redis:
-    image: redis:7-alpine
-    container_name: kick-tts-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    restart: unless-stopped
-    networks:
-      - tts-network
-
-volumes:
-  redis-data:
 
 networks:
   tts-network:
