@@ -1,5 +1,9 @@
+import re
 import time
 from typing import Dict, Any
+
+# Emotes de Kick: [emote:37226:KEKW] — no leer TTS cuando el mensaje los contiene
+EMOTE_PATTERN = re.compile(r"\[emote:\d+:[^\]]+\]", re.IGNORECASE)
 
 from app.config import settings
 from app.services.tts import get_tts
@@ -75,7 +79,11 @@ class ChatEventHandler(EventHandler):
         if len(content) < settings.MIN_MESSAGE_LENGTH:
             logger.debug(f"Message too short ({len(content)} chars), skipping")
             return
-        
+
+        if EMOTE_PATTERN.search(content):
+            logger.debug(f"Message contains emote, skipping TTS: {content[:50]}...")
+            return
+
         if len(content) > settings.MAX_MESSAGE_LENGTH:
             content = content[:settings.MAX_MESSAGE_LENGTH]
         
