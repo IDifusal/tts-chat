@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel
 
 from app.models import TTSRequest, TTSResponse, SoundEffectRequest
-from app.services.piper_tts import get_tts
+from app.services.tts import get_tts
 from app.services.sound_service import get_sound_service
 from app.routes.websocket import broadcast_to_widgets
 
@@ -18,16 +18,18 @@ class TestEventRequest(BaseModel):
 async def generate_tts(request: TTSRequest):
     """Generate TTS audio from text"""
     try:
+        username = request.username or "api"
+        text_to_speak = f"{username} dice: {request.text}"
         tts = get_tts()
         audio_url, cached, gen_time = tts.generate(
-            request.text,
-            request.username,
+            text_to_speak,
+            username,
             request.use_cache
         )
         
         await broadcast_to_widgets({
             'type': 'tts_message',
-            'username': request.username or 'api',
+            'username': username,
             'text': request.text,
             'audio_url': audio_url,
             'cached': cached,
@@ -39,6 +41,45 @@ async def generate_tts(request: TTSRequest):
             cached=cached,
             generation_time_ms=gen_time
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/elevenlabs/voices")
+async def list_elevenlabs_voices():
+    """
+    Lista voces disponibles en tu cuenta de ElevenLabs.
+    En plan Free solo puedes usar por API voces con 'free' en available_for_tiers
+    o voces propias (clonadas). Usa un voice_id de esta lista en ELEVEN_LABS_VOICE_ID.
+    """
+    from app.config import settings
+    if not settings.ELEVEN_LABS_API_KEY:
+        raise HTTPException(
+            status_code=400,
+            detail="ELEVEN_LABS_API_KEY no configurada. Añádela en .env para listar voces.",
+        )
+    try:
+        from elevenlabs.client import ElevenLabs
+        client = ElevenLabs(api_key=settings.ELEVEN_LABS_API_KEY)
+        resp = client.voices.search()
+        # SDK devuelve objeto con .voices (GET /v2/voices)
+        voices = getattr(resp, "voices", resp) if not isinstance(resp, list) else resp
+        out = []
+        for v in (voices or []):
+            voice_id = getattr(v, "voice_id", None) or getattr(v, "id", None)
+            name = getattr(v, "name", None) or ""
+            tiers = getattr(v, "available_for_tiers", None) or []
+            # Algunas voces tienen sharing.free_users_allowed
+            free_ok = "free" in (tiers if isinstance(tiers, list) else [])
+            if hasattr(v, "sharing") and v.sharing:
+                free_ok = free_ok or getattr(v.sharing, "free_users_allowed", False)
+            out.append({
+                "voice_id": voice_id,
+                "name": name,
+                "available_for_tiers": tiers,
+                "usable_on_free_tier": free_ok,
+            })
+        return {"voices": out}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

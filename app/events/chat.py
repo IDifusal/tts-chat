@@ -2,7 +2,7 @@ import time
 from typing import Dict, Any
 
 from app.config import settings
-from app.services.piper_tts import get_tts
+from app.services.tts import get_tts
 from app.routes.websocket import broadcast_to_widgets
 from app.logger import logger
 from app.events.base import EventHandler
@@ -80,8 +80,9 @@ class ChatEventHandler(EventHandler):
             content = content[:settings.MAX_MESSAGE_LENGTH]
         
         try:
+            text_to_speak = f"{username} dice: {content}"
             logger.info(f"Generating TTS for {username}: {content[:50]}...")
-            audio_url, cached, gen_time = self.tts.generate(content, username)
+            audio_url, cached, gen_time = self.tts.generate(text_to_speak, username)
             
             await broadcast_to_widgets({
                 'type': 'tts_message',

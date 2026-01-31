@@ -26,3 +26,6 @@ models/*.onnx.json
 # Docker
 .env.docker.local
 docker-compose.override.yml
+
+static/audio/*
+static/cache/*

@@ -13,6 +13,16 @@ class Settings(BaseSettings):
     
     PIPER_MODEL: str = "models/es_ES-davefx-medium.onnx"
     PIPER_VOICE: str = "es-spanish-male"
+
+    ELEVEN_LABS_API_KEY: str = ""
+    ELEVEN_LABS_VOICE_ID: str = "86V9x9hrQds83qf7zaGn"
+    ELEVEN_LABS_MODEL_ID: str = "eleven_multilingual_v2"
+    # Voice settings (tono más sensual: estabilidad baja, velocidad un poco más lenta)
+    # stability 0-1: bajo = más expresivo/emocional; similarity_boost: cercanía a la voz; speed 0.7-1.2: <1 = más lento
+    ELEVEN_LABS_STABILITY: float = 0.4
+    ELEVEN_LABS_SIMILARITY_BOOST: float = 0.8
+    ELEVEN_LABS_STYLE: float = 0.2
+    ELEVEN_LABS_SPEED: float = 0.92
     
     AUDIO_OUTPUT_DIR: Path = Path("static/audio")
     SOUNDS_DIR: Path = Path("static/sounds")

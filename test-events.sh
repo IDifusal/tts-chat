@@ -32,8 +32,8 @@ function test_tts() {
     curl -X POST "$HOST/api/tts" \
          -H "Content-Type: application/json" \
          -d '{
-           "text": "Hola esto es una prueba de TTS",
-           "username": "TestUser",
+           "text": "Que mas pues",
+           "username": "difusal",
            "use_cache": false
          }'
     echo ""
@@ -44,8 +44,8 @@ function test_sound() {
     curl -X POST "$HOST/api/play-sound" \
          -H "Content-Type: application/json" \
          -d '{
-           "sound_name": "yape",
-           "username": "TestUser"
+           "sound_name": "apaga",
+           "username": "difusal"
          }'
     echo ""
 }
