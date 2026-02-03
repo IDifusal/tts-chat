@@ -37,22 +37,21 @@ app.include_router(api.router, prefix="/api", tags=["api"])
 app.include_router(websocket.router, tags=["websocket"])
 
 
+def _widget_response(request: Request):
+    """Respuesta común para widget (usada en / y /widget)."""
+    return templates.TemplateResponse("widget.html", {"request": request})
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """Main control panel"""
-    return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "channel": settings.KICK_CHANNEL}
-    )
+    """Widget (mismo que /widget)."""
+    return _widget_response(request)
 
 
 @app.get("/widget", response_class=HTMLResponse)
 async def widget(request: Request):
-    """Widget for OBS"""
-    return templates.TemplateResponse(
-        "widget.html",
-        {"request": request}
-    )
+    """Widget for OBS."""
+    return _widget_response(request)
 
 
 @app.get("/health")

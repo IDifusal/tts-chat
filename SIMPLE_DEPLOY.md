@@ -215,11 +215,9 @@ echo '/swapfile none swap sw 0 0' >> /etc/fstab
 
 ### Audio No Se Genera
 ```bash
-# Check Piper model
-docker exec -it kick-tts-bot ls -lh models/
-
-# Re-download si falta
-docker-compose -f docker-compose.prod.yml build --no-cache
+# Verifica ELEVEN_LABS_API_KEY en .env
+# Lista voces: GET /api/elevenlabs/voices
+# Revisa logs del servidor por errores de API
 ```
 
 ## Providers Baratos Recomendados

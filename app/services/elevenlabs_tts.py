@@ -9,7 +9,7 @@ from app.config import settings
 
 
 class ElevenLabsTTS:
-    """TTS usando el SDK oficial de ElevenLabs. Misma interfaz que PiperTTS."""
+    """TTS usando el SDK oficial de ElevenLabs."""
 
     OUTPUT_EXT = "mp3"
     OUTPUT_FORMAT = "mp3_44100_128"

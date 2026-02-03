@@ -1,11 +1,11 @@
 # Kick TTS Bot - Version 1.0
 
-Real-time Text-to-Speech system for Kick.com that listens to chat and generates audio using Piper TTS.
+Real-time Text-to-Speech system for Kick.com that listens to chat and generates audio using ElevenLabs TTS.
 
 ## Features
 
 - Listen to Kick chat via WebSocket
-- Generate audio with Piper TTS (fast and local)
+- Generate audio with ElevenLabs TTS (API)
 - Serve audio via URL for OBS Browser Source
 - Sound effects with `!command` triggers
 - Cache system for repeated messages
@@ -21,7 +21,7 @@ Kick WebSocket (Chat + Events)
 FastAPI Server (port 8000)
     ↓
 Event Handlers (Modular)
-    ├── Chat → Piper TTS → Audio
+    ├── Chat → ElevenLabs TTS → Audio
     ├── Subscription → Visual Alert
     └── [Future Events]
     ↓
@@ -59,19 +59,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-3. Download Piper model:
-```bash
-mkdir -p models
-
-# Spanish model (medium quality)
-wget https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/davefx/medium/es_ES-davefx-medium.onnx \
-  -O models/es_ES-davefx-medium.onnx
-
-wget https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/davefx/medium/es_ES-davefx-medium.onnx.json \
-  -O models/es_ES-davefx-medium.onnx.json
-```
-
-4. Configure environment:
+3. Configure environment:
 ```bash
 cp .env.example .env
 nano .env  # Edit with your values
@@ -80,7 +68,7 @@ nano .env  # Edit with your values
 Required configuration:
 ```bash
 KICK_CHANNEL=your_channel_here
-PIPER_MODEL=models/es_ES-davefx-medium.onnx
+ELEVEN_LABS_API_KEY=your_elevenlabs_api_key
 ```
 
 ## Running
@@ -179,30 +167,25 @@ curl http://localhost:8000/health
 Expected latency:
 - Kick WebSocket → Server: 50-200ms
 - Process message: 10-50ms
-- Piper generate audio: 200-400ms
-- Convert WAV→MP3: 50-100ms
+- ElevenLabs API: ~500-2000ms
 - WebSocket → Widget: 50-100ms
 - OBS playback: 10-50ms
 
-**Total (first time): 370-900ms**
+**Total (first time): ~600-2200ms**
 **Total (cached): 100-200ms**
 
 ## Troubleshooting
 
-### Piper not installing
+### TTS not working
 ```bash
-python --version  # Must be 3.9+
-pip uninstall piper-tts
-pip install piper-tts
+# Verify ELEVEN_LABS_API_KEY in .env
+# List available voices: GET /api/elevenlabs/voices
+# Check server logs for API errors
 ```
 
 ### Audio not generating
 ```bash
-# Test Piper
-echo "hello world" | piper --model models/es_ES-davefx-medium.onnx --output_file test.wav
-
-# Test ffmpeg
-ffmpeg -version
+# Test API: curl -X POST http://localhost:8000/api/tts -H "Content-Type: application/json" -d '{"text":"Hola","username":"test"}'
 ```
 
 ### Widget not connecting in OBS
@@ -226,9 +209,9 @@ tts-chat/
 │   ├── models.py            # Pydantic models
 │   ├── services/
 │   │   ├── kick_listener.py # Kick WebSocket client
-│   │   ├── piper_tts.py     # Piper TTS service
-│   │   ├── sound_service.py # Sound effects
-│   │   └── cache_service.py # Cache system
+│   │   ├── elevenlabs_tts.py # ElevenLabs TTS service
+│   │   ├── sound_service.py  # Sound effects
+│   │   └── cache_service.py  # Cache system
 │   └── routes/
 │       ├── api.py           # API endpoints
 │       └── websocket.py     # WebSocket handlers
@@ -239,7 +222,6 @@ tts-chat/
 ├── templates/
 │   ├── index.html           # Control panel
 │   └── widget.html          # OBS widget
-├── models/                  # Piper models (.onnx)
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -247,8 +229,7 @@ tts-chat/
 
 ## Resources
 
-- **Piper TTS**: https://github.com/OHF-Voice/piper1-gpl
-- **Available Voices**: https://rhasspy.github.io/piper-samples/
+- **ElevenLabs API**: https://elevenlabs.io/docs
 - **Kick API**: https://docs.kick.com/
 - **FastAPI**: https://fastapi.tiangolo.com/
 

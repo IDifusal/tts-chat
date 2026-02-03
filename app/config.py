@@ -1,8 +1,13 @@
-from pydantic_settings import BaseSettings
 from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",  # Ignorar variables del .env que ya no existen (ej. PIPER_*)
+    )
     APP_NAME: str = "Kick TTS Bot"
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
@@ -10,9 +15,6 @@ class Settings(BaseSettings):
     
     KICK_CHANNEL: str
     KICK_WEBSOCKET_URL: str = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679"
-    
-    PIPER_MODEL: str = "models/es_ES-davefx-medium.onnx"
-    PIPER_VOICE: str = "es-spanish-male"
 
     ELEVEN_LABS_API_KEY: str = ""
     ELEVEN_LABS_VOICE_ID: str = "86V9x9hrQds83qf7zaGn"
@@ -44,9 +46,6 @@ class Settings(BaseSettings):
     WIDGET_SHOW_MESSAGES: bool = True
     WIDGET_MESSAGE_DURATION: int = 5000
     WIDGET_MAX_MESSAGES: int = 3
-    
-    class Config:
-        env_file = ".env"
 
 
 settings = Settings()
