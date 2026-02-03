@@ -418,6 +418,7 @@
             console.log('Playing audio:', url);
             
             const audio = new Audio(url);
+            audio.volume = 0.5; // 50% volume
             
             audio.onended = () => {
                 console.log('Audio finished');
