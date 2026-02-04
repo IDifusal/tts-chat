@@ -1,4 +1,3 @@
-version: '3.8'
 
 # Simple production setup - Low resources
 # Usage: docker-compose -f docker-compose.simple.yml up -d
