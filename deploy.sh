@@ -1,4 +1,3 @@
-cat << 'EOF' > ~/deploy.sh
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -36,4 +35,3 @@ docker compose -f docker-compose.simple.yml logs --tail=30
 
 echo "==> ✅ Deploy completado!"
 echo "==> Accede a: https://test.espanglishmarketing.com/widget"
-EOF
