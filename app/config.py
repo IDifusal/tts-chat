@@ -17,14 +17,14 @@ class Settings(BaseSettings):
     KICK_WEBSOCKET_URL: str = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679"
 
     ELEVEN_LABS_API_KEY: str = ""
-    ELEVEN_LABS_VOICE_ID: str = "9oPKasc15pfAbMr7N6Gs"
+    ELEVEN_LABS_VOICE_ID: str = "86V9x9hrQds83qf7zaGn"
     ELEVEN_LABS_MODEL_ID: str = "eleven_multilingual_v2"
-    # Argentina provocativa: estabilidad baja (más expresiva), style alto (más carácter), velocidad un poco más lenta
-    # stability 0-1: bajo = más expresivo; style: más variación estilística; speed <1 = más lento/sugerente
-    ELEVEN_LABS_STABILITY: float = 0.30
+    # Voz provocativa y seductora: baja estabilidad (más expresiva), style alto (más carácter), velocidad lenta
+    # stability: bajo = más emocional; style: más variación; speed <1 = más lento/sugerente
+    ELEVEN_LABS_STABILITY: float = 0.26
     ELEVEN_LABS_SIMILARITY_BOOST: float = 0.82
-    ELEVEN_LABS_STYLE: float = 0.50
-    ELEVEN_LABS_SPEED: float = 0.90
+    ELEVEN_LABS_STYLE: float = 0.58
+    ELEVEN_LABS_SPEED: float = 0.88
     
     AUDIO_OUTPUT_DIR: Path = Path("static/audio")
     SOUNDS_DIR: Path = Path("static/sounds")
