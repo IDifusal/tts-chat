@@ -5,10 +5,12 @@ This directory contains sound effects for the bot.
 ## Required Files
 
 ### Event Sounds (Auto-play)
+
 - `subscription.mp3` - Plays when someone subscribes
 - `follow.mp3` - Plays when someone follows
 
 ### Command Sounds (Manual with !command)
+
 - `carcrashing.mp3` - Example: !carcrashing
 - Add more sounds here...
 
@@ -36,3 +38,4 @@ This directory contains sound effects for the bot.
 - Keep files under 1MB for fast loading
 - Short sounds (1-3 seconds) work best for events
 - Longer sounds OK for commands
+
