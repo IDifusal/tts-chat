@@ -16,6 +16,8 @@ class ChatEventHandler(EventHandler):
     def __init__(self):
         self.tts = get_tts()
         self.last_message_time = {}
+        self._last_spoken_text: str | None = None
+        self._last_spoken_time: float = 0
     
     def should_process(self, event_data: Dict[str, Any]) -> bool:
         sender = event_data.get("sender", {})
@@ -75,6 +77,13 @@ class ChatEventHandler(EventHandler):
         else:
             logger.warning(f"Sound not found: {sound_name}")
     
+    def _build_text_to_speak(self, content: str, username: str) -> str:
+        prefix = (settings.TTS_PREFIX or "").replace("{username}", username)
+        text = f"{prefix}{content}"
+        if settings.TTS_MAX_CHARS > 0 and len(text) > settings.TTS_MAX_CHARS:
+            text = text[: settings.TTS_MAX_CHARS]
+        return text
+
     async def _handle_tts_message(self, content: str, username: str):
         if len(content) < settings.MIN_MESSAGE_LENGTH:
             logger.debug(f"Message too short ({len(content)} chars), skipping")
@@ -85,13 +94,27 @@ class ChatEventHandler(EventHandler):
             return
 
         if len(content) > settings.MAX_MESSAGE_LENGTH:
-            content = content[:settings.MAX_MESSAGE_LENGTH]
-        
+            content = content[: settings.MAX_MESSAGE_LENGTH]
+
+        normalized = content.strip().lower()
+        if settings.TTS_SKIP_DUPLICATE_SECONDS > 0 and normalized:
+            now = time.time()
+            if (
+                self._last_spoken_text == normalized
+                and (now - self._last_spoken_time) < settings.TTS_SKIP_DUPLICATE_SECONDS
+            ):
+                logger.debug(f"Duplicate text in last {settings.TTS_SKIP_DUPLICATE_SECONDS}s, skipping TTS")
+                return
+
+        text_to_speak = self._build_text_to_speak(content, username)
         try:
-            text_to_speak = f"{username} dice: {content}"
             logger.info(f"Generating TTS for {username}: {content[:50]}...")
             audio_url, cached, gen_time = self.tts.generate(text_to_speak, username)
-            
+
+            if settings.TTS_SKIP_DUPLICATE_SECONDS > 0 and normalized:
+                self._last_spoken_text = normalized
+                self._last_spoken_time = time.time()
+
             await broadcast_to_widgets({
                 'type': 'tts_message',
                 'username': username,
@@ -100,8 +123,8 @@ class ChatEventHandler(EventHandler):
                 'cached': cached,
                 'generation_time_ms': gen_time
             })
-            
+
             logger.info(f"TTS generated: {audio_url} ({gen_time:.0f}ms, cached={cached})")
-            
+
         except Exception as e:
             logger.error(f"TTS generation error: {e}", exc_info=True)
