@@ -50,6 +50,17 @@ function test_sound() {
     echo ""
 }
 
+function test_sticker() {
+    echo -e "${YELLOW}Testing STICKER...${NC}"
+    curl -X POST "$HOST/api/test/sticker" \
+         -H "Content-Type: application/json" \
+         -d "{
+           \"sticker_name\": \"baile2\",
+           \"username\": \"difusal\"
+         }"
+    echo ""
+}
+
 function test_all() {
     test_subscription
     sleep 1
@@ -58,6 +69,8 @@ function test_all() {
     test_tts
     sleep 1
     test_sound
+    sleep 1
+    test_sticker
 }
 
 function show_help() {
@@ -68,11 +81,13 @@ function show_help() {
     echo "  follow             - Test follow event"
     echo "  tts                - Test TTS message"
     echo "  sound              - Test sound effect"
+    echo "  sticker [name]     - Test sticker overlay (default: baile1)"
     echo "  all                - Test all events"
     echo "  help               - Show this help"
     echo ""
     echo "Examples:"
     echo "  ./test-events.sh sub"
+    echo "  ./test-events.sh sticker baile1"
     echo "  ./test-events.sh all"
 }
 
@@ -88,6 +103,9 @@ case "${1:-help}" in
         ;;
     sound)
         test_sound
+        ;;
+    sticker)
+        test_sticker "${2:-baile1}"
         ;;
     all)
         test_all

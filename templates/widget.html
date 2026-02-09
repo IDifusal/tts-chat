@@ -176,6 +176,24 @@
         .debug.show {
             display: block;
         }
+
+        .sticker-overlay {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .sticker-overlay img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -205,6 +223,10 @@
         let isShowingVisual = false;
         let audioUnlocked = false;
         let pendingFirstAudio = null;
+
+        const VOLUME_DEFAULT = 0.5;
+        const VOLUME_SOUNDS = 0.9;
+        const VOLUME_STICKERS = 0.3;
         
         const urlParams = new URLSearchParams(window.location.search);
         const showMessages = urlParams.get('show_messages') !== 'false';
@@ -285,13 +307,21 @@
                 if (showMessages) {
                     showSoundEffect(data.username, data.sound_name);
                 }
-                queueAudio(data.audio_url);
+                queueAudio(data.audio_url, VOLUME_SOUNDS);
+            } else if (data.type === 'sticker') {
+                const duration = typeof data.duration_ms === 'number' ? data.duration_ms : 5000;
+                queueVisualEvent(() => showSticker(data.gif_url), duration);
+                if (data.audio_url) {
+                    // Cut audio when the sticker visual should end (even if audio starts late)
+                    const stopAtMs = Date.now() + duration;
+                    queueAudio(data.audio_url, VOLUME_STICKERS, null, stopAtMs);
+                }
             } else if (data.type === 'subscription') {
                 queueVisualEvent(() => showSubscription(data.username), 7500);
-                queueAudio('/static/sounds/subscription.mp3');
+                queueAudio('/static/sounds/subscription.mp3', VOLUME_SOUNDS);
             } else if (data.type === 'follow') {
                 queueVisualEvent(() => showFollow(data.username), 6500);
-                queueAudio('/static/sounds/follow.mp3');
+                queueAudio('/static/sounds/follow.mp3', VOLUME_SOUNDS);
             }
         }
         
@@ -383,14 +413,30 @@
             messageContainer.appendChild(message);
             return message;
         }
+
+        function showSticker(gifUrl) {
+            const overlay = document.createElement('div');
+            overlay.className = 'sticker-overlay';
+
+            const baseUrl = getBaseUrl();
+            const fullUrl = gifUrl.startsWith('http') ? gifUrl : baseUrl + gifUrl;
+
+            const img = document.createElement('img');
+            img.src = fullUrl;
+            img.alt = 'sticker';
+            overlay.appendChild(img);
+
+            document.body.appendChild(overlay);
+            return overlay;
+        }
         
-        function queueAudio(url) {
+        function queueAudio(url, volume = VOLUME_DEFAULT, stopAfterMs = null, stopAtMs = null) {
             // Fix URL if opened as file://
             const baseUrl = getBaseUrl();
             const fullUrl = url.startsWith('http') ? url : baseUrl + url;
             
-            audioQueue.push(fullUrl);
-            console.log('Audio queued:', fullUrl);
+            audioQueue.push({ url: fullUrl, volume, stopAfterMs, stopAtMs });
+            console.log('Audio queued:', fullUrl, 'volume:', volume, 'stopAfterMs:', stopAfterMs, 'stopAtMs:', stopAtMs);
             updateDebug(`Audio queued (${audioQueue.length})`);
             
             if (!isPlaying) {
@@ -413,39 +459,89 @@
             }
             
             isPlaying = true;
-            const url = audioQueue.shift();
+            const item = audioQueue.shift();
+            const url = item.url;
+            const volume = typeof item.volume === 'number' ? item.volume : VOLUME_DEFAULT;
+            const stopAfterMs = typeof item.stopAfterMs === 'number' ? item.stopAfterMs : null;
+            const stopAtMs = typeof item.stopAtMs === 'number' ? item.stopAtMs : null;
             updateDebug(`Playing (${audioQueue.length} left)`);
             console.log('Playing audio:', url);
             
+            // If sticker audio was delayed and its visual already ended, skip it.
+            if (stopAtMs !== null) {
+                const remaining = stopAtMs - Date.now();
+                if (remaining <= 0) {
+                    console.log('Skipping audio (expired stopAtMs):', url);
+                    setTimeout(playNextAudio, 0);
+                    return;
+                }
+            }
+
             const audio = new Audio(url);
-            audio.volume = 0.5; // 50% volume
+            audio.volume = volume;
+            let stopTimer = null;
+            let finished = false;
+
+            function finish() {
+                if (finished) return;
+                finished = true;
+                if (stopTimer) {
+                    clearTimeout(stopTimer);
+                    stopTimer = null;
+                }
+                setTimeout(playNextAudio, 100);
+            }
             
             audio.onended = () => {
                 console.log('Audio finished');
-                setTimeout(playNextAudio, 100);
+                finish();
             };
             
             audio.onerror = (error) => {
                 console.error('Audio error for URL:', url, error);
                 updateDebug('Audio error - skipping');
-                setTimeout(playNextAudio, 100);
+                finish();
             };
             
-            audio.play().catch(error => {
-                console.error('Play error:', error.name, error.message);
-                
-                if (error.name === 'NotAllowedError') {
-                    console.log('Autoplay blocked, showing unlock overlay');
-                    audioUnlocked = false;
-                    audioQueue.unshift(url); // Re-add to queue
-                    isPlaying = false;
-                    showAudioUnlockOverlay();
-                } else {
-                    console.error('Other play error, skipping');
-                    updateDebug('Play error - skipping');
-                    setTimeout(playNextAudio, 100);
-                }
-            });
+            function scheduleStop(ms) {
+                if (!ms || ms <= 0) return;
+                if (finished) return;
+                stopTimer = setTimeout(() => {
+                    if (finished) return;
+                    console.log('Stopping audio due to cutoff:', ms);
+                    try {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    } catch (_) {}
+                    finish();
+                }, ms);
+            }
+
+            // Schedule cutoff: absolute wins (sync with sticker), else relative.
+            if (stopAtMs !== null) {
+                scheduleStop(stopAtMs - Date.now());
+            } else if (stopAfterMs !== null) {
+                scheduleStop(stopAfterMs);
+            }
+
+            const playResult = audio.play();
+            if (playResult && typeof playResult.catch === 'function') {
+                playResult.catch(error => {
+                    console.error('Play error:', error.name, error.message);
+                    
+                    if (error.name === 'NotAllowedError') {
+                        console.log('Autoplay blocked, showing unlock overlay');
+                        audioUnlocked = false;
+                        audioQueue.unshift(item); // Re-add to queue
+                        isPlaying = false;
+                        showAudioUnlockOverlay();
+                    } else {
+                        console.error('Other play error, skipping');
+                        updateDebug('Play error - skipping');
+                        finish();
+                    }
+                });
+            }
         }
         
         function showAudioUnlockOverlay() {

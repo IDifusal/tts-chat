@@ -1,17 +1,55 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
 from pydantic import BaseModel
+import re
+from pathlib import Path
 
 from app.models import TTSRequest, TTSResponse, SoundEffectRequest
 from app.services.tts import get_tts
 from app.services.sound_service import get_sound_service
 from app.routes.websocket import broadcast_to_widgets
+from app.config import settings
 
 router = APIRouter()
+
+STICKER_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$", re.IGNORECASE)
 
 
 class TestEventRequest(BaseModel):
     username: str = "test_user"
+
+class TestStickerRequest(BaseModel):
+    sticker_name: str
+    username: str = "test_user"
+    duration_ms: int | None = None
+
+
+def _find_sticker_assets(sticker_name: str) -> tuple[Path | None, Path | None]:
+    sticker_dir = settings.STICKERS_DIR / sticker_name
+    if not sticker_dir.exists():
+        return None, None
+
+    gif_path = sticker_dir / "sticker.gif"
+    if not gif_path.exists():
+        candidates = sorted(sticker_dir.glob("*.gif"))
+        if not candidates:
+            return None, None
+        gif_path = candidates[0]
+
+    sound_path: Path | None = None
+    for ext in ("mp3", "wav", "ogg"):
+        candidate = sticker_dir / f"sound.{ext}"
+        if candidate.exists():
+            sound_path = candidate
+            break
+    if sound_path is None:
+        for ext in ("mp3", "wav", "ogg"):
+            candidates = sorted(sticker_dir.glob(f"*.{ext}"))
+            if candidates:
+                sound_path = candidates[0]
+                break
+
+    return gif_path, sound_path
 
 
 @router.post("/tts", response_model=TTSResponse)
@@ -132,3 +170,30 @@ async def test_follow(request: TestEventRequest):
         'followed': 'test_channel'
     })
     return {"status": "ok", "event": "follow", "username": request.username}
+
+
+@router.post("/test/sticker")
+async def test_sticker(request: TestStickerRequest):
+    sticker_name = request.sticker_name.strip()
+    if not STICKER_NAME_PATTERN.match(sticker_name):
+        raise HTTPException(status_code=400, detail="Invalid sticker_name")
+
+    gif_path, sound_path = _find_sticker_assets(sticker_name)
+    if gif_path is None:
+        raise HTTPException(status_code=404, detail="Sticker not found")
+
+    audio_url = None
+    if sound_path is not None:
+        audio_url = f"/static/stickers/{sticker_name}/{sound_path.name}"
+
+    duration_ms = request.duration_ms if request.duration_ms is not None else settings.STICKER_DURATION_MS
+
+    await broadcast_to_widgets({
+        "type": "sticker",
+        "sticker_name": sticker_name,
+        "gif_url": f"/static/stickers/{sticker_name}/{gif_path.name}",
+        "audio_url": audio_url,
+        "duration_ms": duration_ms,
+        "username": request.username or "api",
+    })
+    return {"status": "ok", "event": "sticker", "sticker_name": sticker_name, "duration_ms": duration_ms, "audio_url": audio_url}

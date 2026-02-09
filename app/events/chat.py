@@ -1,9 +1,11 @@
 import re
 import time
 from typing import Dict, Any
+from pathlib import Path
 
 # Emotes de Kick: [emote:37226:KEKW] — no leer TTS cuando el mensaje los contiene
 EMOTE_PATTERN = re.compile(r"\[emote:\d+:[^\]]+\]", re.IGNORECASE)
+STICKER_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$", re.IGNORECASE)
 
 from app.config import settings
 from app.services.tts import get_tts
@@ -51,6 +53,12 @@ class ChatEventHandler(EventHandler):
         
         if not self._check_cooldown(username):
             return
+
+        # Sticker command (must be checked before generic sound commands)
+        if settings.ENABLE_STICKERS and content.strip().lower().startswith("!sticker"):
+            handled = await self._handle_sticker_command(content, username)
+            if handled:
+                return
         
         # Sound commands
         if content.startswith("!") and settings.ENABLE_SOUNDS:
@@ -76,6 +84,63 @@ class ChatEventHandler(EventHandler):
             })
         else:
             logger.warning(f"Sound not found: {sound_name}")
+
+    def _find_sticker_assets(self, sticker_name: str) -> tuple[Path | None, Path | None]:
+        sticker_dir = settings.STICKERS_DIR / sticker_name
+        if not sticker_dir.exists():
+            return None, None
+
+        gif_path = sticker_dir / "sticker.gif"
+        if not gif_path.exists():
+            candidates = sorted(sticker_dir.glob("*.gif"))
+            if not candidates:
+                return None, None
+            gif_path = candidates[0]
+
+        sound_path: Path | None = None
+        for ext in ("mp3", "wav", "ogg"):
+            candidate = sticker_dir / f"sound.{ext}"
+            if candidate.exists():
+                sound_path = candidate
+                break
+        if sound_path is None:
+            for ext in ("mp3", "wav", "ogg"):
+                candidates = sorted(sticker_dir.glob(f"*.{ext}"))
+                if candidates:
+                    sound_path = candidates[0]
+                    break
+
+        return gif_path, sound_path
+
+    async def _handle_sticker_command(self, content: str, username: str) -> bool:
+        parts = content.strip().split()
+        if len(parts) < 2:
+            logger.warning(f"Sticker command missing name (requested by {username})")
+            return True
+
+        sticker_name = parts[1].strip()
+        if not STICKER_NAME_PATTERN.match(sticker_name):
+            logger.warning(f"Invalid sticker name: {sticker_name!r} (requested by {username})")
+            return True
+
+        gif_path, sound_path = self._find_sticker_assets(sticker_name)
+        if gif_path is None:
+            logger.warning(f"Sticker not found: {sticker_name}")
+            return True
+
+        audio_url = None
+        if sound_path is not None:
+            audio_url = f"/static/stickers/{sticker_name}/{sound_path.name}"
+
+        await broadcast_to_widgets({
+            "type": "sticker",
+            "sticker_name": sticker_name,
+            "gif_url": f"/static/stickers/{sticker_name}/{gif_path.name}",
+            "audio_url": audio_url,
+            "duration_ms": settings.STICKER_DURATION_MS,
+            "username": username,
+        })
+        return True
     
     def _build_text_to_speak(self, content: str, username: str) -> str:
         prefix = (settings.TTS_PREFIX or "").replace("{username}", username)

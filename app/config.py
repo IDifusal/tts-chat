@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     AUDIO_OUTPUT_DIR: Path = Path("static/audio")
     SOUNDS_DIR: Path = Path("static/sounds")
+    STICKERS_DIR: Path = Path("static/stickers")
     CACHE_DIR: Path = Path("static/cache")
     AUDIO_FORMAT: str = "wav"
     
@@ -52,6 +53,8 @@ class Settings(BaseSettings):
     IGNORE_COMMANDS: bool = True
     ENABLE_TTS: bool = True
     ENABLE_SOUNDS: bool = True
+    ENABLE_STICKERS: bool = True
+    STICKER_DURATION_MS: int = 5000
     
     WIDGET_SHOW_MESSAGES: bool = True
     WIDGET_MESSAGE_DURATION: int = 5000
@@ -62,4 +65,5 @@ settings = Settings()
 
 settings.AUDIO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 settings.SOUNDS_DIR.mkdir(parents=True, exist_ok=True)
+settings.STICKERS_DIR.mkdir(parents=True, exist_ok=True)
 settings.CACHE_DIR.mkdir(parents=True, exist_ok=True)
