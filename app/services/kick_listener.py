@@ -9,13 +9,14 @@ from app.events import handle_event
 
 
 class KickListener:
-    def __init__(self, channel: str):
+    def __init__(self, channel: str, stream_id: str):
         self.channel = channel
+        self.stream_id = stream_id
         self.ws_url = settings.KICK_WEBSOCKET_URL
         self.chatroom_id = None
-        
+
     async def start(self):
-        logger.info(f"Connecting to Kick channel: {self.channel}")
+        logger.info(f"Connecting to Kick channel: {self.channel} (stream_id={self.stream_id})")
         
         await self._get_chatroom_id()
         await self._connect_websocket()
@@ -109,7 +110,7 @@ class KickListener:
             event_data = json.loads(data["data"])
             
             # Route to appropriate event handler
-            await handle_event(event_type, event_data)
+            await handle_event(event_type, event_data, self.stream_id)
             
         except Exception as e:
             logger.error(f"Error processing event {event_type}: {e}")

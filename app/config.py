@@ -13,10 +13,10 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
-    KICK_CHANNEL: str
+    KICK_CHANNEL: str = ""  # Legacy single-channel config; use the streams DB for multi-stream
     KICK_WEBSOCKET_URL: str = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679"
 
-    TTS_BACKEND: str = "openai"  # "openai" (más barato) o "elevenlabs"
+    TTS_BACKEND: str = "elevenlabs"  # "openai" (más barato) o "elevenlabs"
 
     ELEVEN_LABS_API_KEY: str = ""
     ELEVEN_LABS_VOICE_ID: str = "86V9x9hrQds83qf7zaGn"
@@ -46,9 +46,12 @@ class Settings(BaseSettings):
     
     MIN_MESSAGE_LENGTH: int = 2
     MAX_MESSAGE_LENGTH: int = 200
-    TTS_MAX_CHARS: int = 0  # Max caracteres enviados a ElevenLabs por mensaje (0 = sin límite). Reduce créditos.
-    TTS_PREFIX: str = "{username} dice: "  # Prefijo antes del mensaje. "" = solo el mensaje (ahorra créditos).
-    TTS_SKIP_DUPLICATE_SECONDS: int = 60  # No llamar API si el mismo texto se habló en los últimos N seg (0 = desactivado).
+    TTS_MAX_CHARS: int = 0  # Max chars sent to TTS API per message (0 = unlimited).
+    TTS_PREFIX: str = "{username} dice: "  # Prefix before message text. "" = message only.
+    TTS_SKIP_DUPLICATE_SECONDS: int = 60  # Skip if same text was spoken within N seconds (0 = disabled).
+    TTS_COMMAND: str = "!s"              # Chat command that triggers TTS, e.g. "!s hello" → speaks "hello".
+    TTS_FOLLOWERS_ONLY: bool = False      # Require a qualifying badge to use TTS (see TTS_ALLOWED_BADGES).
+    TTS_ALLOWED_BADGES: str = "follower,subscriber,broadcaster,moderator,mod,og,vip"  # Comma-separated badge types that pass the follower check.
     COOLDOWN_SECONDS: int = 1
     IGNORE_COMMANDS: bool = True
     ENABLE_TTS: bool = True

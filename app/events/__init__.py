@@ -9,9 +9,9 @@ EVENT_HANDLERS = {
     'App\\Events\\FollowEvent': FollowEventHandler(),
 }
 
-async def handle_event(event_type: str, event_data: dict):
-    """Route event to appropriate handler"""
+async def handle_event(event_type: str, event_data: dict, stream_id: str):
+    """Route event to the appropriate handler for the given stream."""
     handler = EVENT_HANDLERS.get(event_type)
-    
+
     if handler:
-        await handler.handle(event_data)
+        await handler.handle(event_data, stream_id)

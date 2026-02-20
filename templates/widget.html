@@ -259,6 +259,9 @@
             return '';
         }
         
+        // stream_id injected server-side; falls back to path segment for direct file access
+        const STREAM_ID = "{{ stream_id | default('') }}" || window.location.pathname.split('/').filter(Boolean)[0] || '';
+
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             let host = window.location.host;
@@ -269,7 +272,7 @@
                 console.log('Detected file:// protocol, using localhost:8000');
             }
             
-            const wsUrl = `${protocol}//${host}/events`;
+            const wsUrl = `${protocol}//${host}/${STREAM_ID}/events`;
             console.log('Connecting to:', wsUrl);
             
             ws = new WebSocket(wsUrl);
