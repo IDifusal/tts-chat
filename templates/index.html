@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kick TTS Bot</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d0d0f;
+            --surface: #16161a;
+            --surface2: #1e1e24;
+            --border: #2a2a35;
+            --accent: #53c28b;
+            --accent2: #667eea;
+            --text: #e8e8f0;
+            --muted: #7a7a9a;
+            --red: #ff6b6b;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            text-align: center;
+            padding: 80px 24px 60px;
+            background: radial-gradient(ellipse at 50% 0%, rgba(83,194,139,.12) 0%, transparent 70%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hero .badge {
+            display: inline-block;
+            background: rgba(83,194,139,.15);
+            color: var(--accent);
+            border: 1px solid rgba(83,194,139,.3);
+            border-radius: 999px;
+            padding: 4px 14px;
+            font-size: 12px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.6rem);
+            font-weight: 800;
+            letter-spacing: -.02em;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff 30%, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--muted);
+            max-width: 560px;
+            margin: 0 auto 32px;
+        }
+
+        .command-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+
+        .command-pill span { color: var(--muted); font-size: .85rem; }
+
+        /* ── FEATURES ── */
+        .section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 64px 24px;
+        }
+
+        .section-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .section-sub {
+            color: var(--muted);
+            margin-bottom: 36px;
+            font-size: .95rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: border-color .2s, transform .2s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent2);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+        }
+
+        .feature-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .feature-card p {
+            font-size: .875rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* ── SOUNDS ── */
+        .sounds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .sound-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: border-color .2s;
+            cursor: pointer;
+        }
+
+        .sound-card:hover { border-color: var(--accent); }
+
+        .sound-card.playing { border-color: var(--accent); background: rgba(83,194,139,.08); }
+
+        .sound-name {
+            font-size: .875rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .play-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(83,194,139,.15);
+            border: 1px solid rgba(83,194,139,.3);
+            color: var(--accent);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background .2s;
+        }
+
+        .sound-card:hover .play-btn { background: rgba(83,194,139,.3); }
+
+        /* ── STICKERS ── */
+        .stickers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 16px;
+        }
+
+        .sticker-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: border-color .2s, transform .2s;
+            cursor: pointer;
+        }
+
+        .sticker-card:hover { border-color: var(--accent2); transform: translateY(-2px); }
+
+        .sticker-card img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            display: block;
+        }
+
+        .sticker-card .sticker-name {
+            padding: 8px 12px;
+            font-size: .8rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .has-sound { color: var(--accent); font-size: .7rem; }
+
+        /* ── CMD REFERENCE ── */
+        .cmd-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cmd-table th, .cmd-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: .9rem;
+        }
+
+        .cmd-table th {
+            color: var(--muted);
+            font-weight: 600;
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+
+        .cmd-table tr:last-child td { border-bottom: none; }
+
+        .cmd { font-family: 'SF Mono', 'Fira Code', monospace; color: var(--accent); }
+        .badge-req { background: rgba(255,107,107,.15); color: var(--red); border: 1px solid rgba(255,107,107,.3); border-radius: 6px; padding: 2px 8px; font-size: .75rem; }
+        .badge-all { background: rgba(102,126,234,.15); color: var(--accent2); border: 1px solid rgba(102,126,234,.3); border-radius: 6px; padding: 2px 8px; font-size: .75rem; }
+
+        /* ── STREAMS ── */
+        .streams-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .stream-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .stream-info { display: flex; align-items: center; gap: 12px; }
+
+        .stream-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .stream-dot.running { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+        .stream-channel { font-weight: 600; }
+        .stream-meta { font-size: .8rem; color: var(--muted); }
+
+        .stream-backend {
+            font-size: .75rem;
+            padding: 3px 10px;
+            border-radius: 6px;
+            background: rgba(102,126,234,.1);
+            color: var(--accent2);
+            border: 1px solid rgba(102,126,234,.2);
+        }
+
+        /* ── DIVIDER ── */
+        .divider { border: none; border-top: 1px solid var(--border); }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center;
+            padding: 32px 24px;
+            color: var(--muted);
+            font-size: .85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ── LOADING ── */
+        .loading { color: var(--muted); font-size: .9rem; padding: 16px 0; }
+
+        /* ── SKELETON ── */
+        .skeleton {
+            background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 8px;
+            height: 80px;
+        }
+
+        @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+    </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="badge">Kick TTS Bot</div>
+    <h1>Tu voz en el stream</h1>
+    <p>Bot de texto a voz para Kick. Los seguidores escriben un mensaje y el bot lo lee en vivo con IA.</p>
+    <div class="command-pill">
+        !s <span>hola chat, que hay?</span>
+    </div>
+</div>
+
+<!-- FEATURES -->
+<div class="section">
+    <div class="section-title">Funcionalidades</div>
+    <div class="section-sub">Todo lo que incluye el bot</div>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🎙️</div>
+            <h3>TTS con IA</h3>
+            <p>Los mensajes se convierten a voz con ElevenLabs. Voz personalizable por streamer. Fallback automático a Piper si falla la API.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">👥</div>
+            <h3>Solo seguidores</h3>
+            <p>El TTS requiere badge de seguidor, suscriptor, moderador o VIP. Los no seguidores son ignorados automáticamente.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔊</div>
+            <h3>Efectos de sonido</h3>
+            <p>Los viewers pueden activar sonidos del chat con <code>!nombre</code>. Fácil de ampliar añadiendo archivos .mp3.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎭</div>
+            <h3>Stickers animados</h3>
+            <p>GIFs personalizados que aparecen en pantalla con <code>!sticker nombre</code>. Cada sticker puede tener su propio sonido.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📺</div>
+            <h3>Multi-stream</h3>
+            <p>Un solo servidor soporta múltiples streamers. Cada uno tiene su propia URL, voz y configuración independiente.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Tiempo real</h3>
+            <p>Conexión WebSocket directa con Kick. Sin polling, sin delays. Los mensajes se procesan en menos de 2 segundos.</p>
+        </div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- COMANDOS -->
+<div class="section">
+    <div class="section-title">Comandos del chat</div>
+    <div class="section-sub">Lo que pueden escribir los viewers en Kick</div>
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;">
+        <table class="cmd-table">
+            <thead>
+                <tr>
+                    <th>Comando</th>
+                    <th>Descripción</th>
+                    <th>Requiere</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="cmd">!s [texto]</td>
+                    <td>Lee el texto en voz alta con la voz del streamer</td>
+                    <td><span class="badge-all">Todos</span></td>
+                </tr>
+                <tr>
+                    <td class="cmd">!sticker [nombre]</td>
+                    <td>Muestra un GIF animado en pantalla</td>
+                    <td><span class="badge-all">Todos</span></td>
+                </tr>
+                <tr>
+                    <td class="cmd">![sonido]</td>
+                    <td>Reproduce un efecto de sonido</td>
+                    <td><span class="badge-all">Todos</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- STREAMS ACTIVOS -->
+<div class="section">
+    <div class="section-title">Streams activos</div>
+    <div class="section-sub">Streamers conectados ahora mismo</div>
+    <div class="streams-list" id="streams-list">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- SONIDOS -->
+<div class="section">
+    <div class="section-title">Efectos de sonido</div>
+    <div class="section-sub">Escríbelos en el chat con <code style="color:var(--accent)">!nombre</code></div>
+    <div class="sounds-grid" id="sounds-grid">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- STICKERS -->
+<div class="section">
+    <div class="section-title">Stickers</div>
+    <div class="section-sub">Úsalos con <code style="color:var(--accent)">!sticker nombre</code></div>
+    <div class="stickers-grid" id="stickers-grid">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+    </div>
+</div>
+
+<!-- CONTACTO -->
+<div class="section" style="padding-top: 0;">
+    <div style="background: linear-gradient(135deg, rgba(102,126,234,.08), rgba(83,194,139,.08)); border: 1px solid var(--border); border-radius: 20px; padding: 36px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+        <div>
+            <div class="section-title" style="margin-bottom: 6px;">¿Dudas, sugerencias o quieres el bot?</div>
+            <p style="color: var(--muted); font-size: .95rem; max-width: 480px;">
+                Para solicitar el bot en tu stream, enviar nuevos audios o stickers, reportar bugs o cualquier consulta, escríbenos directamente.
+            </p>
+        </div>
+        <a href="mailto:contact@difusal.com" style="
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent);
+            color: #0d0d0f;
+            font-weight: 700;
+            font-size: .95rem;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: opacity .2s;
+        " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            ✉ contact@difusal.com
+        </a>
+    </div>
+</div>
+
+<footer>
+    Kick TTS Bot &mdash; bot.difusal.com
+</footer>
+
+<script>
+    let currentAudio = null;
+    let currentCard = null;
+
+    function playAudio(url, card) {
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+            if (currentCard) currentCard.classList.remove('playing');
+        }
+        const audio = new Audio(url);
+        audio.volume = 0.6;
+        audio.play().catch(() => {});
+        audio.onended = () => { card.classList.remove('playing'); currentAudio = null; currentCard = null; };
+        currentAudio = audio;
+        currentCard = card;
+        card.classList.add('playing');
+    }
+
+    // Load streams
+    fetch('/api/streams')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('streams-list');
+            if (!data.streams || data.streams.length === 0) {
+                el.innerHTML = '<p class="loading">No hay streams configurados.</p>';
+                return;
+            }
+            el.innerHTML = data.streams.map(s => `
+                <div class="stream-card">
+                    <div class="stream-info">
+                        <div class="stream-dot ${s.running ? 'running' : ''}"></div>
+                        <div>
+                            <div class="stream-channel">${s.channel}</div>
+                            <div class="stream-meta">
+                                ${s.running ? 'En vivo' : 'Desconectado'} &middot;
+                                Widget: <a href="/${s.stream_id}" style="color:var(--accent2)" target="_blank">/${s.stream_id}</a>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="stream-backend">${s.tts_backend}</span>
+                </div>
+            `).join('');
+        })
+        .catch(() => {
+            document.getElementById('streams-list').innerHTML = '<p class="loading">Error cargando streams.</p>';
+        });
+
+    // Load sounds
+    fetch('/api/sounds')
+        .then(r => r.json())
+        .then(sounds => {
+            const el = document.getElementById('sounds-grid');
+            if (!sounds || sounds.length === 0) {
+                el.innerHTML = '<p class="loading">No hay sonidos disponibles.</p>';
+                return;
+            }
+            el.innerHTML = sounds.map(name => `
+                <div class="sound-card" onclick="playAudio('/static/sounds/${name}.mp3', this)">
+                    <span class="sound-name">!${name}</span>
+                    <div class="play-btn">▶</div>
+                </div>
+            `).join('');
+        })
+        .catch(() => {
+            document.getElementById('sounds-grid').innerHTML = '<p class="loading">Error cargando sonidos.</p>';
+        });
+
+    // Load stickers
+    fetch('/api/stickers')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('stickers-grid');
+            if (!data.stickers || data.stickers.length === 0) {
+                el.innerHTML = '<p class="loading">No hay stickers disponibles.</p>';
+                return;
+            }
+            el.innerHTML = data.stickers.map(s => `
+                <div class="sticker-card" onclick="${s.sound_url ? `playAudio('${s.sound_url}', this)` : ''}">
+                    <img src="${s.gif_url}" alt="${s.name}" loading="lazy">
+                    <div class="sticker-name">
+                        <span>!sticker ${s.name}</span>
+                        ${s.sound_url ? '<span class="has-sound">♪</span>' : ''}
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(() => {
+            document.getElementById('stickers-grid').innerHTML = '<p class="loading">Error cargando stickers.</p>';
+        });
+</script>
+</body>
+</html>

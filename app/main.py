@@ -45,6 +45,12 @@ app.include_router(streams_router.router, prefix="/api", tags=["streams"])
 app.include_router(websocket.router, tags=["websocket"])
 
 
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    """Landing page."""
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
 @app.get("/{stream_id}", response_class=HTMLResponse)
 async def stream_widget(request: Request, stream_id: str):
     """Widget page scoped to a specific stream."""

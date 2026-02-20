@@ -144,6 +144,30 @@ async def list_sounds():
     return sound_service.get_available_sounds()
 
 
+@router.get("/stickers")
+async def list_stickers():
+    """List available stickers with their asset URLs."""
+    stickers = []
+    if not settings.STICKERS_DIR.exists():
+        return {"stickers": stickers}
+
+    for sticker_dir in sorted(settings.STICKERS_DIR.iterdir()):
+        if not sticker_dir.is_dir():
+            continue
+
+        gif_path, sound_path = _find_sticker_assets(sticker_dir.name)
+        if gif_path is None:
+            continue
+
+        stickers.append({
+            "name": sticker_dir.name,
+            "gif_url": f"/static/stickers/{sticker_dir.name}/{gif_path.name}",
+            "sound_url": f"/static/stickers/{sticker_dir.name}/{sound_path.name}" if sound_path else None,
+        })
+
+    return {"stickers": stickers}
+
+
 @router.post("/play-sound")
 async def play_sound(request: SoundEffectRequest):
     """Play a sound effect"""
