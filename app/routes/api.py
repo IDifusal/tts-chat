@@ -5,9 +5,10 @@ import re
 from pathlib import Path
 
 from app.models import TTSRequest, TTSResponse, SoundEffectRequest
-from app.services.tts import get_tts
+from app.services.tts import build_tts
 from app.services.sound_service import get_sound_service
-from app.routes.websocket import broadcast_to_widgets
+from app.routes.websocket import broadcast_to_widgets, broadcast_to_stream
+from app.database import get_stream
 from app.config import settings
 
 router = APIRouter()
@@ -54,31 +55,45 @@ def _find_sticker_assets(sticker_name: str) -> tuple[Path | None, Path | None]:
 
 @router.post("/tts", response_model=TTSResponse)
 async def generate_tts(request: TTSRequest):
-    """Generate TTS audio from text"""
+    """
+    Generate TTS audio from text.
+    Pass stream_id to use that stream's voice config; omit for global default.
+    """
     try:
         username = request.username or "api"
         text_to_speak = f"{username} dice: {request.text}"
-        tts = get_tts()
-        audio_url, cached, gen_time = tts.generate(
-            text_to_speak,
-            username,
-            request.use_cache
-        )
-        
-        await broadcast_to_widgets({
+
+        # Resolve TTS backend from stream config if stream_id provided
+        if request.stream_id:
+            stream = await get_stream(request.stream_id)
+            if not stream:
+                raise HTTPException(status_code=404, detail=f"Stream '{request.stream_id}' not found")
+            tts = build_tts(
+                backend=stream["tts_backend"],
+                elevenlabs_voice_id=stream["elevenlabs_voice_id"],
+            )
+        else:
+            tts = build_tts()
+
+        audio_url, cached, gen_time = tts.generate(text_to_speak, username, request.use_cache)
+
+        message = {
             'type': 'tts_message',
             'username': username,
             'text': request.text,
             'audio_url': audio_url,
             'cached': cached,
-            'generation_time_ms': gen_time
-        })
-        
-        return TTSResponse(
-            audio_url=audio_url,
-            cached=cached,
-            generation_time_ms=gen_time
-        )
+            'generation_time_ms': gen_time,
+        }
+
+        if request.stream_id:
+            await broadcast_to_stream(request.stream_id, message)
+        else:
+            await broadcast_to_widgets(message)
+
+        return TTSResponse(audio_url=audio_url, cached=cached, generation_time_ms=gen_time)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

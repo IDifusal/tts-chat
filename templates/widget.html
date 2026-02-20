@@ -224,9 +224,10 @@
         let audioUnlocked = false;
         let pendingFirstAudio = null;
 
-        const VOLUME_DEFAULT = 0.5;
-        const VOLUME_SOUNDS = 0.9;
-        const VOLUME_STICKERS = 0.3;
+        const VOLUME_TTS = 0.8;
+        const VOLUME_DEFAULT = VOLUME_TTS;
+        const VOLUME_SOUNDS = 0.4;
+        const VOLUME_STICKERS = 0.2;
         
         const urlParams = new URLSearchParams(window.location.search);
         const showMessages = urlParams.get('show_messages') !== 'false';

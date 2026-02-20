@@ -56,7 +56,7 @@ Content-Type: application/json
 
 **curl example**
 ```bash
-curl -X POST http://localhost:8000/api/streams \
+curl -X POST http://bot.difusal.com/api/streams \
   -H "Content-Type: application/json" \
   -d '{"stream_id": "23817321124", "channel": "thematrixproject"}'
 ```

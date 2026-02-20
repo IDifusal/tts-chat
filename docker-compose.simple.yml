@@ -13,12 +13,10 @@ services:
     env_file:
       - .env
     volumes:
-      # TTS generated audio (persistence between restarts)
       - ./static/audio:/app/static/audio
-      # TTS cache (performance)
       - ./static/cache:/app/static/cache
-      # No volume for sounds - they're in the repo
-      # No volume for models - downloaded during build
+      - ./data:/app/data          # SQLite streams DB persistence
+      - ./models:/app/models      # Piper model files
     restart: unless-stopped
     networks:
       - tts-network

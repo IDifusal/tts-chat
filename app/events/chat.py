@@ -9,15 +9,14 @@ STICKER_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$", re.IGNORECASE)
 
 
 from app.config import settings
-from app.services.tts import get_tts
 from app.routes.websocket import broadcast_to_stream
 from app.logger import logger
 from app.events.base import EventHandler
 
 
 class ChatEventHandler(EventHandler):
-    def __init__(self):
-        self.tts = get_tts()
+    def __init__(self, tts):
+        self.tts = tts
         self.last_message_time = {}
         self._last_spoken_text: str | None = None
         self._last_spoken_time: float = 0

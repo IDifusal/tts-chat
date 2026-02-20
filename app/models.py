@@ -6,6 +6,7 @@ class TTSRequest(BaseModel):
     text: str
     username: Optional[str] = None
     use_cache: bool = True
+    stream_id: Optional[str] = None  # if set, uses that stream's voice config
 
 
 class TTSResponse(BaseModel):

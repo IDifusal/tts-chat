@@ -28,14 +28,18 @@ function test_follow() {
 }
 
 function test_tts() {
+    local text="${2:-Que mas pues}"
+    local stream_id="${3:-}"
     echo -e "${YELLOW}Testing TTS message...${NC}"
-    curl -X POST "$HOST/api/tts" \
-         -H "Content-Type: application/json" \
-         -d '{
-           "text": "Que mas pues",
-           "username": "difusal",
-           "use_cache": false
-         }'
+    if [ -n "$stream_id" ]; then
+        curl -X POST "$HOST/api/tts" \
+             -H "Content-Type: application/json" \
+             -d "{\"text\": \"$text\", \"username\": \"difusal\", \"use_cache\": false, \"stream_id\": \"$stream_id\"}"
+    else
+        curl -X POST "$HOST/api/tts" \
+             -H "Content-Type: application/json" \
+             -d "{\"text\": \"$text\", \"username\": \"difusal\", \"use_cache\": false}"
+    fi
     echo ""
 }
 

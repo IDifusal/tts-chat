@@ -1,34 +1,59 @@
 """
-Punto de entrada unificado para TTS.
-Backend configurable: openai (más barato) o elevenlabs.
+TTS factory.
+Default backend: ElevenLabs (optional voice_id per stream).
+Fallback: Piper (local, runs when ElevenLabs fails or has no credits).
 """
-from app.config import settings
-from app.services.elevenlabs_tts import ElevenLabsTTS, get_elevenlabs_tts
-from app.services.openai_tts import OpenAITTS, get_openai_tts
+from app.logger import logger
 
 
-_tts_instance = None
+class FallbackTTS:
+    """
+    Tries the primary TTS backend first.
+    On any exception falls back to Piper silently so the stream keeps working.
+    """
+
+    def __init__(self, primary, fallback):
+        self._primary = primary
+        self._fallback = fallback
+
+    def generate(
+        self,
+        text: str,
+        username: str = None,
+        use_cache: bool = True,
+    ) -> tuple[str, bool, float]:
+        try:
+            return self._primary.generate(text, username, use_cache)
+        except Exception as e:
+            logger.warning(f"Primary TTS failed ({e}), falling back to Piper")
+            return self._fallback.generate(text, username, use_cache)
 
 
-def get_tts() -> OpenAITTS | ElevenLabsTTS:
-    """Devuelve el backend TTS según TTS_BACKEND (openai o elevenlabs)."""
-    global _tts_instance
-    if _tts_instance is None:
-        backend = (settings.TTS_BACKEND or "openai").strip().lower()
-        if backend == "openai":
-            if not settings.OPENAI_API_KEY:
-                raise ValueError(
-                    "OPENAI_API_KEY no está configurada. Añádela en .env para usar TTS con OpenAI."
-                )
-            _tts_instance = get_openai_tts()
-        elif backend == "elevenlabs":
-            if not settings.ELEVEN_LABS_API_KEY:
-                raise ValueError(
-                    "ELEVEN_LABS_API_KEY no está configurada. Añádela en .env para usar TTS con ElevenLabs."
-                )
-            _tts_instance = get_elevenlabs_tts()
-        else:
-            raise ValueError(
-                f"TTS_BACKEND inválido: {settings.TTS_BACKEND}. Usa 'openai' o 'elevenlabs'."
-            )
-    return _tts_instance
+def build_tts(backend: str = "elevenlabs", elevenlabs_voice_id: str | None = None):
+    """
+    Build a TTS instance for a stream.
+
+    Args:
+        backend: 'elevenlabs' (default) or 'piper'
+        elevenlabs_voice_id: optional per-stream voice override; falls back to
+                             global ELEVEN_LABS_VOICE_ID from config if not set.
+    """
+    backend = (backend or "elevenlabs").strip().lower()
+
+    from app.services.piper_tts import get_piper_tts
+    piper = get_piper_tts()
+
+    if backend == "piper":
+        return piper
+
+    if backend == "elevenlabs":
+        from app.config import settings
+        if not settings.ELEVEN_LABS_API_KEY:
+            logger.warning("ELEVEN_LABS_API_KEY not set — using Piper only")
+            return piper
+
+        from app.services.elevenlabs_tts import ElevenLabsTTS
+        elevenlabs = ElevenLabsTTS(voice_id=elevenlabs_voice_id)
+        return FallbackTTS(primary=elevenlabs, fallback=piper)
+
+    raise ValueError(f"Unknown TTS backend: '{backend}'. Use 'elevenlabs' or 'piper'.")
