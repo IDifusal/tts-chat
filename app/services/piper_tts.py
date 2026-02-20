@@ -77,10 +77,19 @@ class PiperTTS:
 
 
 _piper_instance: PiperTTS | None = None
+_piper_unavailable: bool = False
 
 
-def get_piper_tts() -> PiperTTS:
-    global _piper_instance
+def get_piper_tts() -> PiperTTS | None:
+    """Returns the Piper TTS instance, or None if the model file is not available."""
+    global _piper_instance, _piper_unavailable
+    if _piper_unavailable:
+        return None
     if _piper_instance is None:
-        _piper_instance = PiperTTS()
+        try:
+            _piper_instance = PiperTTS()
+        except (FileNotFoundError, Exception) as e:
+            logger.warning(f"Piper TTS unavailable: {e}")
+            _piper_unavailable = True
+            return None
     return _piper_instance
