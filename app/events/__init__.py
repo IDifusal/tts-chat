@@ -3,13 +3,14 @@ from app.events.subscription import SubscriptionEventHandler
 from app.events.follow import FollowEventHandler
 
 
-def make_handlers(tts) -> dict:
+def make_handlers(tts, tts_enabled: bool) -> dict:
     """
     Build a fresh set of event handlers for one stream.
-    Each KickListener calls this so ChatEventHandler gets its own TTS instance.
+    Each KickListener calls this so ChatEventHandler gets its own TTS instance
+    and per-stream TTS enabled flag.
     """
     return {
-        'App\\Events\\ChatMessageEvent': ChatEventHandler(tts=tts),
+        'App\\Events\\ChatMessageEvent': ChatEventHandler(tts=tts, tts_enabled=tts_enabled),
         'App\\Events\\ChannelSubscriptionEvent': SubscriptionEventHandler(),
         'App\\Events\\FollowEvent': FollowEventHandler(),
     }

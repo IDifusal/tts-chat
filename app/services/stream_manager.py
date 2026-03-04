@@ -18,6 +18,7 @@ class StreamManager:
                 stream["channel"],
                 tts_backend=stream.get("tts_backend", "elevenlabs"),
                 elevenlabs_voice_id=stream.get("elevenlabs_voice_id"),
+                tts_enabled=stream.get("tts_enabled", 1) == 1,
             )
 
     async def start_stream(
@@ -26,6 +27,7 @@ class StreamManager:
         channel: str,
         tts_backend: str = "elevenlabs",
         elevenlabs_voice_id: str | None = None,
+        tts_enabled: bool = True,
     ):
         existing = self._tasks.get(stream_id)
         if existing and not existing.done():
@@ -37,6 +39,7 @@ class StreamManager:
             stream_id=stream_id,
             tts_backend=tts_backend,
             elevenlabs_voice_id=elevenlabs_voice_id,
+            tts_enabled=tts_enabled,
         )
         task = asyncio.create_task(listener.start(), name=f"kick-{stream_id}")
         self._tasks[stream_id] = task

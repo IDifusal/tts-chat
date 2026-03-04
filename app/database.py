@@ -23,6 +23,7 @@ async def init_db():
         for col, definition in [
             ("tts_backend", "TEXT NOT NULL DEFAULT 'elevenlabs'"),
             ("elevenlabs_voice_id", "TEXT"),
+            ("tts_enabled", "INTEGER NOT NULL DEFAULT 1"),
         ]:
             try:
                 await db.execute(f"ALTER TABLE streams ADD COLUMN {col} {definition}")
@@ -35,7 +36,8 @@ async def get_all_streams() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
-            "SELECT stream_id, channel, tts_backend, elevenlabs_voice_id, created_at FROM streams ORDER BY created_at"
+            "SELECT stream_id, channel, tts_backend, elevenlabs_voice_id, tts_enabled, created_at "
+            "FROM streams ORDER BY created_at"
         ) as cursor:
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
@@ -45,7 +47,8 @@ async def get_stream(stream_id: str) -> Optional[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
-            "SELECT stream_id, channel, tts_backend, elevenlabs_voice_id, created_at FROM streams WHERE stream_id = ?",
+            "SELECT stream_id, channel, tts_backend, elevenlabs_voice_id, tts_enabled, created_at "
+            "FROM streams WHERE stream_id = ?",
             (stream_id,),
         ) as cursor:
             row = await cursor.fetchone()
@@ -60,8 +63,8 @@ async def add_stream(
 ):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            """INSERT INTO streams (stream_id, channel, tts_backend, elevenlabs_voice_id)
-               VALUES (?, ?, ?, ?)""",
+            """INSERT INTO streams (stream_id, channel, tts_backend, elevenlabs_voice_id, tts_enabled)
+               VALUES (?, ?, ?, ?, 1)""",
             (stream_id, channel, tts_backend, elevenlabs_voice_id),
         )
         await db.commit()
@@ -72,6 +75,7 @@ async def update_stream(
     channel: str | None = None,
     tts_backend: str | None = None,
     elevenlabs_voice_id: str | None = None,
+    tts_enabled: bool | None = None,
 ) -> bool:
     """Update any combination of fields on a stream row."""
     fields, values = [], []
@@ -85,6 +89,9 @@ async def update_stream(
     if elevenlabs_voice_id is not None:
         fields.append("elevenlabs_voice_id = ?")
         values.append(elevenlabs_voice_id)
+    if tts_enabled is not None:
+        fields.append("tts_enabled = ?")
+        values.append(1 if tts_enabled else 0)
 
     if not fields:
         return True

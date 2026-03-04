@@ -16,14 +16,16 @@ class KickListener:
         stream_id: str,
         tts_backend: str = "piper",
         elevenlabs_voice_id: str | None = None,
+        tts_enabled: bool = True,
     ):
         self.channel = channel
         self.stream_id = stream_id
         self.ws_url = settings.KICK_WEBSOCKET_URL
         self.chatroom_id = None
 
-        tts = build_tts(tts_backend, elevenlabs_voice_id)
-        self._handlers = make_handlers(tts)
+        self.tts_enabled = tts_enabled
+        tts = build_tts(tts_backend, elevenlabs_voice_id) if tts_enabled else None
+        self._handlers = make_handlers(tts, tts_enabled=tts_enabled)
 
     async def start(self):
         logger.info(

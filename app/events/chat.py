@@ -15,8 +15,9 @@ from app.events.base import EventHandler
 
 
 class ChatEventHandler(EventHandler):
-    def __init__(self, tts):
+    def __init__(self, tts, tts_enabled: bool):
         self.tts = tts
+        self.tts_enabled = tts_enabled
         self.last_message_time = {}
         self._last_spoken_text: str | None = None
         self._last_spoken_time: float = 0
@@ -79,7 +80,10 @@ class ChatEventHandler(EventHandler):
 
         # TTS command: !s <text>
         tts_prefix = settings.TTS_COMMAND + " "
-        if settings.ENABLE_TTS and content.startswith(tts_prefix):
+        if settings.ENABLE_TTS and self.tts_enabled and content.startswith(tts_prefix):
+            if self.tts is None:
+                logger.debug("TTS disabled or backend not available for this stream")
+                return
             tts_text = content[len(tts_prefix):].strip()
 
             if not tts_text:

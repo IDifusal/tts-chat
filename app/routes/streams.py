@@ -13,12 +13,14 @@ class StreamCreateRequest(BaseModel):
     channel: str
     tts_backend: str = "elevenlabs"
     elevenlabs_voice_id: Optional[str] = None  # uses global ELEVEN_LABS_VOICE_ID if omitted
+    tts_enabled: bool = True
 
 
 class StreamUpdateRequest(BaseModel):
     channel: Optional[str] = None
     tts_backend: Optional[str] = None
     elevenlabs_voice_id: Optional[str] = None
+    tts_enabled: Optional[bool] = None
 
 
 @router.get("/streams")
@@ -51,6 +53,7 @@ async def create_stream(req: StreamCreateRequest):
         req.channel,
         tts_backend=req.tts_backend,
         elevenlabs_voice_id=req.elevenlabs_voice_id,
+        tts_enabled=req.tts_enabled,
     )
 
     return {
@@ -58,6 +61,7 @@ async def create_stream(req: StreamCreateRequest):
         "channel": req.channel,
         "tts_backend": req.tts_backend,
         "elevenlabs_voice_id": req.elevenlabs_voice_id,
+        "tts_enabled": req.tts_enabled,
     }
 
 
@@ -76,6 +80,7 @@ async def update_stream_route(stream_id: str, req: StreamUpdateRequest):
         channel=req.channel,
         tts_backend=req.tts_backend,
         elevenlabs_voice_id=req.elevenlabs_voice_id,
+        tts_enabled=req.tts_enabled,
     )
 
     updated = await get_stream(stream_id)
@@ -86,6 +91,7 @@ async def update_stream_route(stream_id: str, req: StreamUpdateRequest):
         updated["channel"],
         tts_backend=updated["tts_backend"],
         elevenlabs_voice_id=updated["elevenlabs_voice_id"],
+        tts_enabled=updated.get("tts_enabled", 1) == 1,
     )
 
     return updated
