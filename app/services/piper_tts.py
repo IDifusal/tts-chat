@@ -69,6 +69,12 @@ class PiperTTS:
     def _synthesize(self, text: str) -> bytes:
         buf = io.BytesIO()
         with wave.open(buf, "wb") as wav_file:
+            # Piper necesita que el header WAV tenga canales, sample width y sample rate
+            sample_rate = getattr(self._voice, "sample_rate", 22050)
+            sample_width = getattr(self._voice, "sample_width", 2)
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(sample_width)
+            wav_file.setframerate(sample_rate)
             self._voice.synthesize(text, wav_file)
         return buf.getvalue()
 

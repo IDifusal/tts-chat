@@ -352,7 +352,7 @@
     <h1>Tu voz en el stream</h1>
     <p>Bot de texto a voz para Kick.com. Tus seguidores escriben <code style="color:var(--accent)">!s mensaje</code> en el chat y el bot lo lee en vivo con IA. Gratis, fácil de instalar en OBS.</p>
     <div class="command-pill">
-        !s <span>hola chat, que hay?</span>
+        !s <span>ya kcheya</span>
     </div>
 </div>
 
@@ -521,34 +521,38 @@
         card.classList.add('playing');
     }
 
-    // Load streams
-    fetch('/api/streams')
-        .then(r => r.json())
-        .then(data => {
-            const el = document.getElementById('streams-list');
-            if (!data.streams || data.streams.length === 0) {
-                el.innerHTML = '<p class="loading">No hay streams configurados.</p>';
-                return;
-            }
-            el.innerHTML = data.streams.map(s => `
-                <div class="stream-card">
-                    <div class="stream-info">
-                        <div class="stream-dot ${s.running ? 'running' : ''}"></div>
-                        <div>
-                            <div class="stream-channel">${s.channel}</div>
-                            <div class="stream-meta">
-                                ${s.running ? 'En vivo' : 'Desconectado'} &middot;
-                                Widget: <a href="/${s.stream_id}" style="color:var(--accent2)" target="_blank">/${s.stream_id}</a>
+    function loadStreams() {
+        fetch('/api/streams')
+            .then(r => r.json())
+            .then(data => {
+                const el = document.getElementById('streams-list');
+                if (!data.streams || data.streams.length === 0) {
+                    el.innerHTML = '<p class="loading">No hay streams configurados.</p>';
+                    return;
+                }
+                el.innerHTML = data.streams.map(s => `
+                    <div class="stream-card">
+                        <div class="stream-info">
+                            <div class="stream-dot ${s.running ? 'running' : ''}"></div>
+                            <div>
+                                <div class="stream-channel">${s.channel}</div>
+                                <div class="stream-meta">
+                                    ${s.running ? 'En vivo' : 'Desconectado'} &middot;
+                                    Widget: <a href="/${s.stream_id}" style="color:var(--accent2)" target="_blank">/${s.stream_id}</a>
+                                </div>
                             </div>
                         </div>
+                        <span class="stream-backend">${s.tts_backend}</span>
                     </div>
-                    <span class="stream-backend">${s.tts_backend}</span>
-                </div>
-            `).join('');
-        })
-        .catch(() => {
-            document.getElementById('streams-list').innerHTML = '<p class="loading">Error cargando streams.</p>';
-        });
+                `).join('');
+            })
+            .catch(() => {
+                document.getElementById('streams-list').innerHTML = '<p class="loading">Error cargando streams.</p>';
+            });
+    }
+
+    loadStreams();
+    setInterval(loadStreams, 15000); // refresh every 15s
 
     // Load sounds
     fetch('/api/sounds')
