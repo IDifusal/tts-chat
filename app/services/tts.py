@@ -44,12 +44,20 @@ def build_tts(backend: str = "elevenlabs", elevenlabs_voice_id: str | None = Non
     piper = get_piper_tts()  # None if model file is missing
 
     if backend == "piper":
-        if piper is None:
-            raise RuntimeError(
-                "Piper backend requested but model file not found. "
-                "Set PIPER_MODEL in .env and ensure the file exists."
-            )
-        return piper
+        if piper is not None:
+            return piper
+        logger.warning(
+            "Piper backend requested but unavailable (install piper-tts and set PIPER_MODEL). "
+            "Falling back to ElevenLabs if configured."
+        )
+        from app.config import settings
+        if settings.ELEVEN_LABS_API_KEY:
+            from app.services.elevenlabs_tts import ElevenLabsTTS
+            return ElevenLabsTTS(voice_id=elevenlabs_voice_id)
+        raise RuntimeError(
+            "Piper backend requested but unavailable and ElevenLabs has no API key. "
+            "Install piper-tts, set PIPER_MODEL in .env, or set ELEVEN_LABS_API_KEY."
+        )
 
     if backend == "elevenlabs":
         from app.config import settings
