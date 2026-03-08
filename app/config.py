@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     CACHE_DIR: Path = Path("static/cache")
     AUDIO_FORMAT: str = "wav"
 
+    # SQLite streams DB: use data/streams.db locally; in Docker set to /app/data/streams.db
+    # so the same file is used via the mounted volume (./data:/app/data).
+    DATABASE_PATH: Path = Path("data/streams.db")
+
     ENABLE_REDIS_CACHE: bool = False
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379

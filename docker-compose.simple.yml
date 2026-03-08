@@ -1,6 +1,8 @@
-
 # Simple production setup - Low resources
 # Usage: docker-compose -f docker-compose.simple.yml up -d
+#
+# SQLite: DB is at ./data/streams.db on the host, mounted at /app/data.
+# DATABASE_PATH is set so the container always uses the volume (no in-image DB).
 
 services:
   tts-bot:
@@ -12,11 +14,13 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - DATABASE_PATH=/app/data/streams.db
     volumes:
       - ./static/audio:/app/static/audio
       - ./static/cache:/app/static/cache
-      - ./data:/app/data          # SQLite streams DB persistence
-      - ./models:/app/models      # Piper model files
+      - ./data:/app/data
+      - ./models:/app/models
     restart: unless-stopped
     networks:
       - tts-network

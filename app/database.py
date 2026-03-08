@@ -2,12 +2,17 @@ import aiosqlite
 from pathlib import Path
 from typing import Optional
 
-DB_PATH = Path("data/streams.db")
+from app.config import settings
+
+
+def _db_path() -> Path:
+    return Path(settings.DATABASE_PATH)
 
 
 async def init_db():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    async with aiosqlite.connect(DB_PATH) as db:
+    path = _db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    async with aiosqlite.connect(path) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS streams (
                 stream_id           TEXT PRIMARY KEY,
@@ -33,7 +38,7 @@ async def init_db():
 
 
 async def get_all_streams() -> list[dict]:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_path()) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
             "SELECT stream_id, channel, tts_backend, elevenlabs_voice_id, tts_enabled, created_at "
@@ -44,7 +49,7 @@ async def get_all_streams() -> list[dict]:
 
 
 async def get_stream(stream_id: str) -> Optional[dict]:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_path()) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
             "SELECT stream_id, channel, tts_backend, elevenlabs_voice_id, tts_enabled, created_at "
@@ -61,7 +66,7 @@ async def add_stream(
     tts_backend: str = "elevenlabs",
     elevenlabs_voice_id: str | None = None,
 ):
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_path()) as db:
         await db.execute(
             """INSERT INTO streams (stream_id, channel, tts_backend, elevenlabs_voice_id, tts_enabled)
                VALUES (?, ?, ?, ?, 1)""",
@@ -97,7 +102,7 @@ async def update_stream(
         return True
 
     values.append(stream_id)
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_path()) as db:
         cursor = await db.execute(
             f"UPDATE streams SET {', '.join(fields)} WHERE stream_id = ?",
             values,
@@ -107,7 +112,7 @@ async def update_stream(
 
 
 async def delete_stream(stream_id: str) -> bool:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_path()) as db:
         cursor = await db.execute(
             "DELETE FROM streams WHERE stream_id = ?", (stream_id,)
         )
