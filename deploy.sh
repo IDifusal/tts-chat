@@ -7,7 +7,7 @@ N8N_PORT="127.0.0.1:5678:5678"
 TTS_URL="https://test.espanglishmarketing.com/widget"
 
 echo "==> (1/9) Deteniendo n8n para liberar RAM..."
-docker stop n8n 2>/dev/null || true
+docker stop n8n-n8n-1 2>/dev/null || true
 
 echo "==> (2/9) Actualizando repositorio tts-chat..."
 cd ~/tts-chat
@@ -34,10 +34,10 @@ echo "==> (8/9) Esperando 8s..."
 sleep 8
 
 echo "==> (9/9) Levantando n8n nuevamente (sin conflictos)..."
-if docker ps -a --format '{{.Names}}' | grep -qx 'n8n'; then
-  docker start n8n >/dev/null
+if docker ps -a --format '{{.Names}}' | grep -qx 'n8n-n8n-1'; then
+  docker start n8n-n8n-1 >/dev/null
 else
-  docker run -d --name n8n \
+  docker run -d --name n8n-n8n-1 \
     -p "$N8N_PORT" \
     --restart unless-stopped \
     "$N8N_IMAGE" >/dev/null
