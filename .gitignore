@@ -29,3 +29,4 @@ docker-compose.override.yml
 
 static/audio/*
 static/cache/*
+data/

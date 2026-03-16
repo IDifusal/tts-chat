@@ -282,6 +282,42 @@
         .badge-all { background: rgba(102,126,234,.15); color: var(--accent2); border: 1px solid rgba(102,126,234,.3); border-radius: 6px; padding: 2px 8px; font-size: .75rem; }
 
         /* ── STREAMS ── */
+        .streams-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .streams-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: .8rem;
+            color: var(--muted);
+        }
+
+        .streams-refresh-btn {
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            font-size: .8rem;
+            cursor: pointer;
+            transition: background .15s, border-color .15s, transform .08s;
+        }
+
+        .streams-refresh-btn:hover {
+            background: rgba(83,194,139,.16);
+            border-color: var(--accent);
+        }
+
+        .streams-refresh-btn:active {
+            transform: translateY(1px);
+        }
+
         .streams-list { display: flex; flex-direction: column; gap: 10px; }
 
         .stream-card {
@@ -434,8 +470,17 @@
 
 <!-- STREAMS ACTIVOS -->
 <div class="section">
-    <div class="section-title">Streams activos</div>
-    <div class="section-sub">Streamers conectados ahora mismo</div>
+    <div class="streams-header">
+        <div>
+            <div class="section-title">Streams activos</div>
+            <div class="section-sub">Streamers conectados ahora mismo</div>
+        </div>
+        <div class="streams-actions">
+            <button class="streams-refresh-btn" type="button" onclick="loadStreams()">
+                Comprobar conexión
+            </button>
+        </div>
+    </div>
     <div class="streams-list" id="streams-list">
         <div class="skeleton"></div>
         <div class="skeleton"></div>
@@ -521,6 +566,26 @@
         card.classList.add('playing');
     }
 
+    function refreshStream(streamId, button) {
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Reconectando...';
+        }
+        fetch(`/api/streams/${streamId}/refresh`, { method: 'POST' })
+            .then(() => {
+                loadStreams();
+            })
+            .catch(() => {
+                alert('No se pudo reiniciar el stream.');
+            })
+            .finally(() => {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'Reintentar conexión';
+                }
+            });
+    }
+
     function loadStreams() {
         fetch('/api/streams')
             .then(r => r.json())
@@ -542,7 +607,16 @@
                                 </div>
                             </div>
                         </div>
-                        <span class="stream-backend">${s.tts_backend}</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="stream-backend">${s.tts_backend}</span>
+                            <button
+                                type="button"
+                                class="streams-refresh-btn"
+                                onclick="refreshStream('${s.stream_id}', this)"
+                            >
+                                Reintentar conexión
+                            </button>
+                        </div>
                     </div>
                 `).join('');
             })

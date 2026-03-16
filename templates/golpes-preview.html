@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo !golpes — Street Fighter</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0d0d14;
+            color: #eee;
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            gap: 16px;
+        }
+
+        h1 {
+            font-family: 'Black Ops One', sans-serif;
+            font-size: 1.8rem;
+            color: #e94560;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(233,69,96,0.6);
+        }
+
+        .hint {
+            font-size: 0.82rem;
+            color: #555;
+        }
+        .hint code { color: #888; }
+
+        /* ── Arena ─────────────────────────────────────────── */
+        .arena {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16/9;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #e94560;
+            box-shadow: 0 0 40px rgba(233,69,96,0.3), inset 0 0 80px rgba(0,0,0,0.6);
+            /* Street-fighter-style gradient background */
+            background:
+                radial-gradient(ellipse 70% 40% at 50% 100%, rgba(233,69,96,0.15) 0%, transparent 70%),
+                linear-gradient(180deg, #0a0a18 0%, #111130 40%, #1a1a3a 70%, #0d0d14 100%);
+        }
+
+        /* floor tile */
+        .floor {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 18%;
+            background:
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(233,69,96,0.06) 0px, rgba(233,69,96,0.06) 1px,
+                    transparent 1px, transparent 60px
+                ),
+                linear-gradient(180deg, transparent, rgba(233,69,96,0.12));
+            pointer-events: none;
+        }
+
+        .arena::before { display: none; }
+
+        /* ── Fighters ───────────────────────────────────────── */
+        .fighters {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 0 7%;          /* sin padding lateral — todo el ancho */
+            pointer-events: none;
+        }
+
+        .fighter {
+            position: relative;
+            width: 46%;               /* más ancho para llenarse */
+            height: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        #viewer-left, #viewer-right {
+            width: 100%;
+            height: 100%;
+        }
+
+        .fighter canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+
+        .fighter .name-tag {
+            position: absolute;
+            bottom: -9%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            border: 1px solid rgba(233,69,96,0.4);
+            padding: 3px 14px;
+            border-radius: 3px;
+            font-family: 'Black Ops One', sans-serif;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            color: #fff;
+        }
+
+        /* ── Hit effect ─────────────────────────────────────── */
+        .hit-effect {
+            position: absolute;
+            left: 50%; top: 42%;
+            transform: translate(-50%, -50%) scale(0);
+            font-family: 'Black Ops One', sans-serif;
+            font-size: 2.6rem;
+            color: #fff;
+            text-shadow: 0 0 8px #e94560, 0 0 24px #e94560, 0 0 50px rgba(233,69,96,0.5);
+            z-index: 6;
+            pointer-events: none;
+            opacity: 0;
+            white-space: nowrap;
+        }
+        .hit-effect.show {
+            animation: hitPop 0.55s cubic-bezier(.36,.07,.19,.97) forwards;
+        }
+        @keyframes hitPop {
+            0%   { transform: translate(-50%,-50%) scale(0) rotate(-8deg); opacity: 0; }
+            35%  { transform: translate(-50%,-50%) scale(1.4) rotate(4deg); opacity: 1; }
+            70%  { transform: translate(-50%,-50%) scale(1.1) rotate(-2deg); opacity: 1; }
+            100% { transform: translate(-50%,-50%) scale(0.9) rotate(0deg); opacity: 0; }
+        }
+
+        /* ── Fighter animations ─────────────────────────────── */
+        .fighter.shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        .fighter.dodge {
+            animation: dodgeBack 0.5s ease-in-out forwards;
+        }
+        .fighter.winner-glow {
+            animation: winGlow 2s ease-out;
+        }
+        .fighter.advance-right {
+            animation: advRight 0.55s ease-in-out forwards;
+        }
+        .fighter.advance-left {
+            animation: advLeft 0.55s ease-in-out forwards;
+        }
+
+        @keyframes shake {
+            0%,100% { transform: translateX(0) rotate(0deg); }
+            20%     { transform: translateX(-12px) rotate(-4deg); }
+            40%     { transform: translateX(12px) rotate(4deg); }
+            60%     { transform: translateX(-8px) rotate(-2deg); }
+            80%     { transform: translateX(8px) rotate(2deg); }
+        }
+        @keyframes dodgeBack {
+            0%   { transform: translateX(0); }
+            30%  { transform: translateX(-18%); }
+            100% { transform: translateX(0); }
+        }
+        #fighter-right.dodge {
+            animation: dodgeBackRight 0.5s ease-in-out forwards;
+        }
+        @keyframes dodgeBackRight {
+            0%   { transform: translateX(0); }
+            30%  { transform: translateX(18%); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes winGlow {
+            0%   { filter: brightness(1); }
+            25%  { filter: brightness(1.5) drop-shadow(0 0 16px #e94560); transform: scale(1.06); }
+            100% { filter: brightness(1); transform: scale(1); }
+        }
+        @keyframes advRight {
+            0%   { transform: translateX(0); }
+            55%  { transform: translateX(24%); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes advLeft {
+            0%   { transform: translateX(0); }
+            55%  { transform: translateX(-24%); }
+            100% { transform: translateX(0); }
+        }
+
+        /* ── Result overlay ─────────────────────────────────── */
+        .result-overlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.72);
+            z-index: 10;
+        }
+        .result-overlay.show { display: flex; }
+
+        .result-box {
+            background: linear-gradient(135deg, #100a20, #1a0a30);
+            border: 2px solid #e94560;
+            padding: 20px 50px;
+            border-radius: 8px;
+            text-align: center;
+            animation: resultIn 0.25s ease-out;
+        }
+        .result-box .move-label {
+            font-size: 0.8rem;
+            color: #888;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .result-box .move-name {
+            font-family: 'Black Ops One', sans-serif;
+            font-size: 1.4rem;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+        .result-box .result-label {
+            font-size: 0.8rem;
+            color: #888;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .result-box .winner-name {
+            font-family: 'Black Ops One', sans-serif;
+            font-size: 2rem;
+            color: #e94560;
+            text-shadow: 0 0 14px rgba(233,69,96,0.7);
+        }
+        @keyframes resultIn {
+            from { transform: scale(0.7) translateY(20px); opacity: 0; }
+            to   { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        /* ── Controls ───────────────────────────────────────── */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .name-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .name-row label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .name-row input {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background: #13131f;
+            color: #eee;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            min-width: 130px;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-action {
+            padding: 12px 28px;
+            font-family: 'Black Ops One', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+        .btn-action:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        }
+        .btn-action:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .btn-action:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn-golpear { background: #e94560; color: #fff; box-shadow: 0 0 12px rgba(233,69,96,0.4); }
+        .btn-golpear:hover:not(:disabled) { background: #ff6b7a; }
+
+        .btn-patada  { background: #f5a623; color: #1a0a00; box-shadow: 0 0 12px rgba(245,166,35,0.4); }
+        .btn-patada:hover:not(:disabled)  { background: #ffbe55; }
+
+        .btn-esquivar { background: #1e88e5; color: #fff; box-shadow: 0 0 12px rgba(30,136,229,0.4); }
+        .btn-esquivar:hover:not(:disabled) { background: #42a5f5; }
+    </style>
+</head>
+<body>
+    <h1>!GOLPES</h1>
+    <p class="hint">
+        Servidor: <code>/golpes-preview</code> &mdash;
+        <span id="skin-status" style="color:#e94560;">Cargando skin…</span>
+    </p>
+
+    <!-- Debug: preview directo del PNG para confirmar que la URL es correcta -->
+    <div id="skin-debug" style="display:flex;gap:12px;align-items:center;background:#13131f;border:1px solid #333;padding:8px 14px;border-radius:6px;font-size:0.8rem;color:#888;">
+        <span>Skin raw (64×64):</span>
+        <img id="skin-raw-preview" src="" alt="skin"
+             style="width:64px;height:64px;image-rendering:pixelated;border:1px solid #444;background:#000;"
+             onerror="this.alt='❌ no encontrada';this.style.border='1px solid #e94560';"
+             onload="document.getElementById('skin-status').textContent='Skin: chupetin.png ✓';this.style.border='1px solid #2ecc71';">
+        <span id="skin-url-display" style="word-break:break-all;color:#555;font-size:0.75rem;"></span>
+    </div>
+
+    <div class="arena" id="arena">
+        <div class="floor"></div>
+        <div class="hit-effect" id="hit-effect">¡GOLPE!</div>
+        <div class="fighters">
+            <div class="fighter" id="fighter-left">
+                <div id="viewer-left"></div>
+                <span class="name-tag" id="name-left">Streamer</span>
+            </div>
+            <div class="fighter" id="fighter-right">
+                <div id="viewer-right"></div>
+                <span class="name-tag" id="name-right">Viewer</span>
+            </div>
+        </div>
+        <div class="result-overlay" id="result-overlay">
+            <div class="result-box">
+                <div class="move-label">Movimiento</div>
+                <div class="move-name" id="move-name">-</div>
+                <div class="result-label">Ganador</div>
+                <div class="winner-name" id="winner-name">-</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="name-row">
+            <label>P1: <input type="text" id="input-left"  value="Streamer" /></label>
+            <label>P2: <input type="text" id="input-right" value="Viewer"   /></label>
+        </div>
+        <div class="action-row">
+            <button class="btn-action btn-golpear"  id="btn-golpear"  type="button">GOLPEAR</button>
+            <button class="btn-action btn-patada"   id="btn-patada"   type="button">PATADA</button>
+            <button class="btn-action btn-esquivar" id="btn-esquivar" type="button">ESQUIVAR</button>
+        </div>
+
+        <!-- Guía de skins -->
+        <details style="width:100%;max-width:900px;background:#13131f;border:1px solid #2a2a3f;border-radius:6px;padding:0;">
+            <summary style="padding:10px 16px;cursor:pointer;font-size:0.9rem;font-weight:700;letter-spacing:1px;color:#888;">
+                ¿Cómo agregar skins / modelos propios?
+            </summary>
+            <div style="padding:12px 16px;font-size:0.82rem;color:#888;line-height:1.7;border-top:1px solid #222;">
+                <p style="color:#e94560;font-weight:700;margin-bottom:6px;">Lo que usa skinview3d</p>
+                <p>skinview3d acepta <strong style="color:#eee;">PNG 64×64</strong> en formato estándar de Minecraft
+                (textura con las secciones de cabeza, cuerpo, brazos y piernas desplegadas).
+                <strong style="color:#eee;">No soporta modelos 3D custom</strong> (OBJ, GLTF, etc.).</p>
+
+                <p style="color:#e94560;font-weight:700;margin:10px 0 6px;">Para cambiar la skin de este demo</p>
+                <ol style="padding-left:18px;">
+                    <li>Coloca tu PNG de skin (64×64) en <code style="color:#aaa;">static/pelea/skins/minombre.png</code></li>
+                    <li>Abre este HTML y edita la línea del JS:<br>
+                        <code style="color:#aaa;">var SKIN_URL = base + '/static/pelea/skins/<strong>chupetin</strong>.png';</code><br>
+                        → cambia <code>chupetin</code> por el nombre de tu archivo.</li>
+                    <li>Para P1 y P2 con skins distintas, define <code>SKIN_P1</code> y <code>SKIN_P2</code> y pasa cada uno al viewer correspondiente.</li>
+                </ol>
+
+                <p style="color:#e94560;font-weight:700;margin:10px 0 6px;">Para modelos 3D completamente custom (no Minecraft)</p>
+                <p>Habría que reemplazar skinview3d por Three.js puro, cargar un archivo
+                <code style="color:#aaa;">.glb/.gltf</code> con <code style="color:#aaa;">GLTFLoader</code>
+                y animar con <code style="color:#aaa;">AnimationMixer</code>.
+                La lógica de pelea (golpe, esquivar, resultado) permanecería igual;
+                solo cambia la parte de renderizado.</p>
+
+                <p style="color:#e94560;font-weight:700;margin:10px 0 6px;">Dónde obtener skins 64×64</p>
+                <ul style="padding-left:18px;">
+                    <li><a href="https://www.minecraftskins.com" target="_blank" style="color:#aaa;">minecraftskins.com</a> → descargar PNG (no la preview)</li>
+                    <li><a href="https://namemc.com" target="_blank" style="color:#aaa;">namemc.com</a> → buscar jugador → Download Skin</li>
+                    <li><a href="https://minotar.net/skin/TU_USERNAME" target="_blank" style="color:#aaa;">minotar.net/skin/USERNAME</a> → skin directo por nick</li>
+                    <li><a href="https://www.skindex.com" target="_blank" style="color:#aaa;">skindex.com</a> → miles de skins descargables</li>
+                </ul>
+            </div>
+        </details>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/skinview3d@3.4.1/bundles/skinview3d.bundle.js"></script>
+    <script>
+    (function () {
+        'use strict';
+
+        var base = (window.location.origin && window.location.origin !== 'null')
+            ? window.location.origin : 'http://localhost:8000';
+
+        // Skin Minecraft 64x64 — static/pelea/skins/chupetin.png
+        var SKIN_URL      = base + '/static/pelea/skins/chupetin.png';
+        var SKIN_FALLBACK = 'https://minotar.net/skin/MHF_Steve';
+
+        var viewerLeft  = null;
+        var viewerRight = null;
+
+        var statusEl = document.getElementById('skin-status');
+        var arenaEl  = document.getElementById('arena');
+
+        function arenaRect() {
+            var r = arenaEl.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        // ------------------------------------------------------------------
+        // FIX 1 — Vista lateral
+        //
+        // viewer.controls NO existe por defecto en skinview3d (hay que llamar
+        // createOrbitControls). En vez de eso rotamos playerWrapper, que es
+        // el Group de Three.js que contiene todo el modelo del personaje.
+        //
+        //   P1 (izquierda) debe mirar a la DERECHA → rotation.y = -PI/2
+        //   P2 (derecha)   debe mirar a la IZQUIERDA → rotation.y = +PI/2
+        // ------------------------------------------------------------------
+        function applyYaw(viewer, yaw) {
+            // Intentar controls.yaw si existe (por si acaso)
+            try { if (viewer.controls) viewer.controls.yaw = yaw; } catch(e) {}
+
+            // Rotar el modelo directamente — esto siempre funciona
+            var model = viewer.playerWrapper || viewer.player || viewer.playerObject;
+            if (model && model.rotation !== undefined) {
+                model.rotation.y = yaw;
+            }
+        }
+
+        function makeViewer(containerId, yaw, skinUrl) {
+            var container = document.getElementById(containerId);
+            var r = arenaRect();
+            var w = Math.max(80,  Math.floor(r.w * 0.40));
+            var h = Math.max(120, Math.floor(r.h * 0.90));
+
+            var canvas = document.createElement('canvas');
+            canvas.width  = w;
+            canvas.height = h;
+            canvas.style.pointerEvents = 'none';
+            container.innerHTML = '';
+            container.appendChild(canvas);
+
+            // Crear viewer sin skin y cargarla por separado con manejo de error
+            var viewer = new skinview3d.SkinViewer({
+                canvas: canvas,
+                width:  w,
+                height: h
+            });
+
+            viewer.background            = null;
+            viewer.globalLight.intensity = 2.4;
+            viewer.cameraLight.intensity = 0.0;
+            viewer.zoom       = 0.82;
+            viewer.autoRotate = false;
+
+            // loadSkin() devuelve una Promise — si falla, usa Steve
+            var loaded = viewer.loadSkin(skinUrl);
+            if (loaded && typeof loaded.catch === 'function') {
+                loaded.catch(function() {
+                    viewer.loadSkin(SKIN_FALLBACK);
+                    if (statusEl) statusEl.textContent = 'Skin: fallback (Steve) — URL incorrecta o bloqueada';
+                });
+            }
+
+            // Vista lateral: aplicar yaw al playerWrapper (objeto Three.js del modelo)
+            applyYaw(viewer, yaw);
+            requestAnimationFrame(function() { applyYaw(viewer, yaw); });
+
+            setAnim(viewer, 'idle');
+            return viewer;
+        }
+
+        function buildViewers(skinUrl) {
+            if (viewerLeft  && typeof viewerLeft.dispose  === 'function') viewerLeft.dispose();
+            if (viewerRight && typeof viewerRight.dispose === 'function') viewerRight.dispose();
+            viewerLeft  = makeViewer('viewer-left',   Math.PI / 2, skinUrl);
+            viewerRight = makeViewer('viewer-right', -Math.PI / 2, skinUrl);
+        }
+
+        function initViewers() {
+            var r = arenaRect();
+            if (r.w < 80) return;
+
+            // Mostrar la URL en el debug y en el img preview
+            var previewImg  = document.getElementById('skin-raw-preview');
+            var urlDisplay  = document.getElementById('skin-url-display');
+            if (previewImg)  previewImg.src = SKIN_URL;
+            if (urlDisplay)  urlDisplay.textContent = SKIN_URL;
+            if (statusEl)    statusEl.textContent   = 'Cargando…';
+
+            buildViewers(SKIN_URL);
+        }
+
+        var resizeTimer;
+        new ResizeObserver(function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(initViewers, 220);
+        }).observe(arenaEl);
+
+        setTimeout(initViewers, 120);
+
+        // ── Animaciones ─────────────────────────────────────────
+        function setAnim(viewer, type) {
+            if (!viewer) return;
+            var anim;
+            if (type === 'run' && typeof skinview3d.RunningAnimation === 'function') {
+                anim = new skinview3d.RunningAnimation();
+                anim.speed = 4;
+            } else if (type === 'fly' && typeof skinview3d.FlyingAnimation === 'function') {
+                anim = new skinview3d.FlyingAnimation();
+                anim.speed = 2;
+            } else {
+                // idle / fallback
+                anim = new skinview3d.WalkingAnimation();
+                anim.speed = 1.2;
+            }
+            anim.paused = false;
+            viewer.animation = anim;
+        }
+
+        // ── DOM refs ────────────────────────────────────────────
+        var resultOverlay  = document.getElementById('result-overlay');
+        var winnerNameEl   = document.getElementById('winner-name');
+        var moveNameEl     = document.getElementById('move-name');
+        var fighterLeftEl  = document.getElementById('fighter-left');
+        var fighterRightEl = document.getElementById('fighter-right');
+        var hitEffectEl    = document.getElementById('hit-effect');
+        var inputLeft      = document.getElementById('input-left');
+        var inputRight     = document.getElementById('input-right');
+        var nameLeftEl     = document.getElementById('name-left');
+        var nameRightEl    = document.getElementById('name-right');
+        var btnGolpear     = document.getElementById('btn-golpear');
+        var btnPatada      = document.getElementById('btn-patada');
+        var btnEsquivar    = document.getElementById('btn-esquivar');
+
+        var allBtns = [btnGolpear, btnPatada, btnEsquivar];
+
+        // ── Moves config ────────────────────────────────────────
+        var MOVES = {
+            golpear: {
+                label:      'GOLPEAR',
+                effects:    ['¡GOLPE!', '¡CRACK!', 'POW!!', 'BOOM!!'],
+                attackAnim: 'run',
+                victimAnim: 'idle'
+            },
+            patada: {
+                label:      'PATADA',
+                effects:    ['¡PATADA!', '¡HAA!', 'KICK!!', '¡CRASH!'],
+                attackAnim: 'fly',
+                victimAnim: 'idle'
+            },
+            esquivar: {
+                label:    'ESQUIVAR',
+                effects:  ['¡ESQUIVA!', 'MISS!!', '¡FALLO!', 'DODGE!'],
+                // en esquivar, el objetivo esquiva y el atacante "falla"
+                dodge: true
+            }
+        };
+
+        function pickRandom(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function showHitEffect(text) {
+            hitEffectEl.textContent = text;
+            hitEffectEl.classList.remove('show');
+            void hitEffectEl.offsetWidth;
+            hitEffectEl.classList.add('show');
+        }
+
+        function resetClasses() {
+            ['shake','dodge','winner-glow','advance-right','advance-left'].forEach(function (c) {
+                fighterLeftEl.classList.remove(c);
+                fighterRightEl.classList.remove(c);
+            });
+        }
+
+        function lockBtns(lock) {
+            allBtns.forEach(function (b) { b.disabled = lock; });
+        }
+
+        // ── Core fight sequence ──────────────────────────────────
+        function fight(moveKey) {
+            if (!viewerLeft || !viewerRight) return;
+            if (allBtns[0].disabled) return;
+
+            var move    = MOVES[moveKey];
+            var p1      = (inputLeft.value  || 'P1').trim();
+            var p2      = (inputRight.value || 'P2').trim();
+            nameLeftEl.textContent  = p1;
+            nameRightEl.textContent = p2;
+
+            resetClasses();
+            resultOverlay.classList.remove('show');
+            hitEffectEl.classList.remove('show');
+            lockBtns(true);
+
+            var leftAttacks = Math.random() < 0.5;
+            var attacker    = leftAttacks ? p1 : p2;
+            var defender    = leftAttacks ? p2 : p1;
+            var attackerEl  = leftAttacks ? fighterLeftEl  : fighterRightEl;
+            var defenderEl  = leftAttacks ? fighterRightEl : fighterLeftEl;
+            var attackerV   = leftAttacks ? viewerLeft     : viewerRight;
+            var defenderV   = leftAttacks ? viewerRight    : viewerLeft;
+
+            var effectText  = pickRandom(move.effects);
+
+            if (move.dodge) {
+                // El DEFENSOR esquiva — atacante no llega
+                setAnim(attackerV, 'run');
+                attackerEl.classList.add(leftAttacks ? 'advance-right' : 'advance-left');
+
+                setTimeout(function () { showHitEffect(effectText); }, 200);
+
+                setTimeout(function () {
+                    // Defensor esquiva hacia atrás
+                    defenderEl.classList.add('dodge');
+                    setAnim(attackerV, 'idle');
+                }, 300);
+
+                setTimeout(function () {
+                    // Nadie cae — el atacante falló
+                    moveNameEl.textContent  = move.label + ' (¡FALLIDO!)';
+                    winnerNameEl.textContent = defender + ' esquiva';
+                    resultOverlay.classList.add('show');
+                    setAnim(defenderV, 'idle');
+                }, 750);
+
+            } else {
+                // Ataque conecta — atacante gana
+                setAnim(attackerV, move.attackAnim);
+                attackerEl.classList.add(leftAttacks ? 'advance-right' : 'advance-left');
+
+                setTimeout(function () { showHitEffect(effectText); }, 240);
+
+                setTimeout(function () {
+                    defenderEl.classList.add('shake');
+                    attackerEl.classList.add('winner-glow');
+                    setAnim(attackerV, 'idle');
+                    setAnim(defenderV, move.victimAnim);
+                }, 500);
+
+                setTimeout(function () {
+                    moveNameEl.textContent   = move.label;
+                    winnerNameEl.textContent = attacker;
+                    resultOverlay.classList.add('show');
+                }, 800);
+            }
+
+            setTimeout(function () {
+                resultOverlay.classList.remove('show');
+                resetClasses();
+                setAnim(viewerLeft,  'idle');
+                setAnim(viewerRight, 'idle');
+                lockBtns(false);
+            }, 4600);
+        }
+
+        btnGolpear.addEventListener('click',  function () { fight('golpear');  });
+        btnPatada.addEventListener('click',   function () { fight('patada');   });
+        btnEsquivar.addEventListener('click', function () { fight('esquivar'); });
+
+    }());
+    </script>
+</body>
+</html>

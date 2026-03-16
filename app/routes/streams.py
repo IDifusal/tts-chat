@@ -97,6 +97,29 @@ async def update_stream_route(stream_id: str, req: StreamUpdateRequest):
     return updated
 
 
+@router.post("/streams/{stream_id}/refresh")
+async def refresh_stream(stream_id: str):
+    """Restart a stream listener without changing its configuration."""
+    stream = await get_stream(stream_id)
+    if not stream:
+        raise HTTPException(status_code=404, detail="stream not found")
+
+    await stream_manager.stop_stream(stream_id)
+    await stream_manager.start_stream(
+        stream_id,
+        stream["channel"],
+        tts_backend=stream.get("tts_backend", "elevenlabs"),
+        elevenlabs_voice_id=stream.get("elevenlabs_voice_id"),
+        tts_enabled=stream.get("tts_enabled", 1) == 1,
+    )
+
+    return {
+        "status": "restarted",
+        "stream_id": stream_id,
+        "channel": stream["channel"],
+    }
+
+
 @router.delete("/streams/{stream_id}")
 async def remove_stream(stream_id: str):
     """Remove a stream and stop its listener."""
