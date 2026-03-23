@@ -48,7 +48,7 @@ app.include_router(websocket.router, tags=["websocket"])
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Landing page."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.get("/{stream_id}", response_class=HTMLResponse)
@@ -61,8 +61,9 @@ async def stream_widget(request: Request, stream_id: str):
             content={"detail": f"Stream '{stream_id}' not found. Add it via POST /api/streams"},
         )
     return templates.TemplateResponse(
+        request,
         "widget.html",
-        {"request": request, "stream_id": stream_id, "channel": stream["channel"]},
+        {"stream_id": stream_id, "channel": stream["channel"]},
     )
 
 
